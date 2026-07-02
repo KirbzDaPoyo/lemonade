@@ -1,0 +1,24 @@
+{
+  "expo": {
+    "name": "Project Lemonade",
+    "slug": "project-lemonade",
+    "version": "0.1.0",
+    "orientation": "portrait",
+    "userInterfaceStyle": "light",
+    "newArchEnabled": true,
+    "scheme": "project-lemonade",
+    "assetBundlePatterns": [
+      "**/*"
+    ],
+    "ios": {
+      "supportsTablet": true,
+      "bundleIdentifier": "com.projectlemonade.mvp"
+    },
+    "android": {
+      "package": "com.projectlemonade.mvp"
+    },
+    "web": {
+      "bundler": "metro"
+    }
+  }
+}
