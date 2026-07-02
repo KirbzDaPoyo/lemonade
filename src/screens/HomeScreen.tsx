@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { FlatList, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native';
 
 import { AppButton } from '../components/AppButton';
 import { FilterBar } from '../components/FilterBar';
@@ -14,7 +14,7 @@ type HomeScreenProps = {
 };
 
 export function HomeScreen({ navigation }: HomeScreenProps) {
-  const { places } = usePlaces();
+  const { isLoading, places, storageError } = usePlaces();
   const [selectedStatus, setSelectedStatus] = useState<PlaceStatus | 'all'>('all');
   const [selectedCategory, setSelectedCategory] = useState<PlaceCategory | 'all'>('all');
 
@@ -52,23 +52,39 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
         onStatusChange={setSelectedStatus}
       />
 
-      <FlatList
-        contentContainerStyle={styles.listContent}
-        data={filteredPlaces}
-        keyExtractor={(place) => place.id}
-        ListEmptyComponent={
-          <View style={styles.emptyState}>
-            <Text style={styles.emptyTitle}>No places match these filters.</Text>
-            <Text style={styles.emptyBody}>Add a reel URL or loosen the filters.</Text>
-          </View>
-        }
-        renderItem={({ item }) => (
-          <PlaceCardRow
-            place={item}
-            onPress={() => navigation.navigate({ name: 'PlaceDetail', placeId: item.id })}
-          />
-        )}
-      />
+      {storageError ? (
+        <View style={styles.errorBanner}>
+          <Text style={styles.errorTitle}>Storage issue</Text>
+          <Text style={styles.errorBody}>{storageError}</Text>
+        </View>
+      ) : null}
+
+      {isLoading ? (
+        <View style={styles.loadingState}>
+          <ActivityIndicator color={colors.primary} />
+          <Text style={styles.loadingText}>Loading saved places...</Text>
+        </View>
+      ) : (
+        <FlatList
+          contentContainerStyle={styles.listContent}
+          data={filteredPlaces}
+          keyExtractor={(place) => place.id}
+          ListEmptyComponent={
+            <View style={styles.emptyState}>
+              <Text style={styles.emptyTitle}>No places match these filters.</Text>
+              <Text style={styles.emptyBody}>Add a reel URL or loosen the filters.</Text>
+            </View>
+          }
+          renderItem={({ item }) => (
+            <PlaceCardRow
+              place={item}
+              onPress={() =>
+                navigation.navigate({ name: 'PlaceDetail', placeId: item.id })
+              }
+            />
+          )}
+        />
+      )}
     </View>
   );
 }
@@ -103,6 +119,35 @@ const styles = StyleSheet.create({
   listContent: {
     gap: spacing.md,
     paddingBottom: spacing.xxl
+  },
+  loadingState: {
+    alignItems: 'center',
+    flex: 1,
+    gap: spacing.md,
+    justifyContent: 'center'
+  },
+  loadingText: {
+    color: colors.muted,
+    fontSize: 15,
+    fontWeight: '700'
+  },
+  errorBanner: {
+    backgroundColor: '#fff3f0',
+    borderColor: colors.danger,
+    borderRadius: 8,
+    borderWidth: 1,
+    gap: spacing.xs,
+    padding: spacing.md
+  },
+  errorTitle: {
+    color: colors.danger,
+    fontSize: 14,
+    fontWeight: '900'
+  },
+  errorBody: {
+    color: colors.text,
+    fontSize: 13,
+    lineHeight: 18
   },
   emptyState: {
     alignItems: 'center',

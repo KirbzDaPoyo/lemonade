@@ -1,4 +1,4 @@
-import { Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
 
 import { AppButton } from '../components/AppButton';
 import { AppNavigation } from '../navigation/types';
@@ -15,8 +15,26 @@ type PlaceDetailScreenProps = {
 const statusOptions: PlaceStatus[] = ['want_to_go', 'visited', 'favorite', 'skip'];
 
 export function PlaceDetailScreen({ navigation, placeId }: PlaceDetailScreenProps) {
-  const { places, updatePlaceStatus } = usePlaces();
+  const { deletePlace, places, storageError, updatePlaceStatus } = usePlaces();
   const place = places.find((savedPlace) => savedPlace.id === placeId);
+
+  const handleDelete = () => {
+    if (!place) {
+      return;
+    }
+
+    Alert.alert('Delete place?', `${place.placeName} will be removed from saved places.`, [
+      { text: 'Cancel', style: 'cancel' },
+      {
+        text: 'Delete',
+        style: 'destructive',
+        onPress: () => {
+          deletePlace(place.id);
+          navigation.resetToHome();
+        }
+      }
+    ]);
+  };
 
   if (!place) {
     return (
@@ -39,6 +57,13 @@ export function PlaceDetailScreen({ navigation, placeId }: PlaceDetailScreenProp
         <Text style={styles.title}>{place.placeName}</Text>
         <Text style={styles.meta}>{place.areaCity}</Text>
       </View>
+
+      {storageError ? (
+        <View style={styles.errorBanner}>
+          <Text style={styles.errorTitle}>Storage issue</Text>
+          <Text style={styles.errorBody}>{storageError}</Text>
+        </View>
+      ) : null}
 
       <Section title="Status">
         <View style={styles.statusGrid}>
@@ -95,6 +120,8 @@ export function PlaceDetailScreen({ navigation, placeId }: PlaceDetailScreenProp
           ) : null}
         </View>
       </Section>
+
+      <AppButton label="Delete Place" onPress={handleDelete} variant="danger" />
     </ScrollView>
   );
 }
@@ -158,6 +185,24 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     gap: spacing.md,
     padding: spacing.lg
+  },
+  errorBanner: {
+    backgroundColor: '#fff3f0',
+    borderColor: colors.danger,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    gap: spacing.xs,
+    padding: spacing.md
+  },
+  errorTitle: {
+    color: colors.danger,
+    fontSize: 14,
+    fontWeight: '900'
+  },
+  errorBody: {
+    color: colors.text,
+    fontSize: 13,
+    lineHeight: 18
   },
   sectionTitle: {
     color: colors.text,

@@ -11,6 +11,7 @@ The MVP is intentionally based on user-initiated sharing or pasting. It stores t
 - Mock place-search service that returns candidate matches
 - Candidate confirmation flow
 - Place Detail screen with source URL, map URL, tags, notes, and status updates
+- Local persistence for saved places using Expo-compatible AsyncStorage
 - TypeScript domain models and service interfaces designed for a future Google Places or Supabase integration
 
 ## Setup
@@ -20,6 +21,8 @@ Install dependencies:
 ```bash
 npm install
 ```
+
+This includes `@react-native-async-storage/async-storage` for local saved-place persistence.
 
 Start the app:
 
@@ -46,6 +49,7 @@ src/
   navigation/              Lightweight MVP navigation types and router
   screens/                 Home, Add Place, Candidate Match, Place Detail
   services/placeSearch/    Provider interface and mock implementation
+  storage/                 Local persistence adapter for saved places
   store/                   In-memory saved places state
   types/                   Domain types for place cards and filters
   utils/                   Display labels and formatting helpers
@@ -54,5 +58,5 @@ src/
 ## Future Integration Notes
 
 - Replace `src/services/placeSearch/mockPlaceSearchService.ts` with a Google Places provider that implements `PlaceSearchService`.
-- Move the in-memory store in `src/store/PlacesContext.tsx` behind a repository interface before adding Supabase persistence.
+- Replace `src/storage/placesStorage.ts` with a Supabase-backed repository when account sync is needed.
 - Add auth only after the local save flow and database schema are stable.
