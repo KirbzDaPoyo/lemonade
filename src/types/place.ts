@@ -1,3 +1,5 @@
+import type { PlaceExtractionResult } from './extraction';
+
 export type PlaceCategory =
   | 'cafe'
   | 'restaurant'
@@ -41,6 +43,7 @@ export type PlaceCard = {
 export type DraftPlaceEntry = {
   sourceInstagramUrl: string;
   suggestedPlaceName: string;
+  extraction?: PlaceExtractionResult;
   notes?: string;
   captionText?: string;
   screenshotUri?: string;

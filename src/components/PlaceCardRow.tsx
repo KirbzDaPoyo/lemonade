@@ -22,7 +22,7 @@ export function PlaceCardRow({ place, onPress }: PlaceCardRowProps) {
             {place.placeName}
           </Text>
           <Text numberOfLines={1} style={styles.meta}>
-            {categoryLabels[place.category]} · {place.areaCity}
+            {categoryLabels[place.category]} - {place.areaCity}
           </Text>
         </View>
         <View style={styles.statusPill}>

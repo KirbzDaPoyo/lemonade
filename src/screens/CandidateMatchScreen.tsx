@@ -20,15 +20,30 @@ export function CandidateMatchScreen({
 }: CandidateMatchScreenProps) {
   const { addPlace } = usePlaces();
 
+  const mergeUnique = (values: string[]) =>
+    Array.from(new Set(values.map((value) => value.trim()).filter(Boolean)));
+
   const handleSaveCandidate = (candidate: PlaceCandidate) => {
+    const extraction = draft.extraction;
+    const mergedTags = mergeUnique([
+      ...candidate.tags,
+      ...(extraction?.vibe_tags ?? []),
+      ...(extraction?.recommended_items ?? [])
+    ]);
+    const visibleCluesNote = extraction?.visible_clues.length
+      ? `Visible clues: ${extraction.visible_clues.join(', ')}`
+      : undefined;
+    const notes = [draft.notes, visibleCluesNote].filter(Boolean).join('\n\n') || undefined;
+
     const savedPlace = addPlace({
       placeName: candidate.name,
       address: candidate.address,
       areaCity: candidate.areaCity,
       category: candidate.category,
-      cuisineOrSpecialty: candidate.cuisineOrSpecialty,
-      tags: candidate.tags,
-      notes: draft.notes,
+      cuisineOrSpecialty:
+        candidate.cuisineOrSpecialty || extraction?.cuisine_or_specialty,
+      tags: mergedTags,
+      notes,
       sourceInstagramUrl: draft.sourceInstagramUrl,
       mapUrl: candidate.mapUrl,
       placeId: candidate.providerPlaceId,
@@ -52,6 +67,17 @@ export function CandidateMatchScreen({
         <Text numberOfLines={2} style={styles.draftUrl}>
           {draft.sourceInstagramUrl}
         </Text>
+        {draft.extraction ? (
+          <View style={styles.extractionSummary}>
+            <Text style={styles.extractionSummaryText}>
+              {categoryLabels[draft.extraction.category]} -{' '}
+              {draft.extraction.area_or_city || 'Area to confirm'}
+            </Text>
+            <Text style={styles.extractionSummaryText}>
+              {draft.extraction.cuisine_or_specialty || 'Specialty to confirm'}
+            </Text>
+          </View>
+        ) : null}
       </View>
 
       <FlatList
@@ -89,7 +115,7 @@ function CandidateRow({
         <View style={styles.candidateText}>
           <Text style={styles.candidateName}>{candidate.name}</Text>
           <Text style={styles.candidateMeta}>
-            {categoryLabels[candidate.category]} · {candidate.areaCity}
+            {categoryLabels[candidate.category]} - {candidate.areaCity}
           </Text>
         </View>
         <Text style={styles.selectText}>Select</Text>
@@ -142,6 +168,18 @@ const styles = StyleSheet.create({
   draftUrl: {
     color: colors.muted,
     fontSize: 13
+  },
+  extractionSummary: {
+    borderTopColor: colors.border,
+    borderTopWidth: 1,
+    gap: spacing.xs,
+    marginTop: spacing.sm,
+    paddingTop: spacing.sm
+  },
+  extractionSummaryText: {
+    color: colors.text,
+    fontSize: 13,
+    fontWeight: '700'
   },
   listContent: {
     gap: spacing.md,
