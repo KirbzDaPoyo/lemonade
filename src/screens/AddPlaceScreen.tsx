@@ -141,7 +141,10 @@ export function AddPlaceScreen({ navigation }: AddPlaceScreenProps) {
     try {
       const candidates = await placeSearchService.searchPlaces({
         query: placeName,
-        sourceInstagramUrl
+        sourceInstagramUrl,
+        areaOrCity: areaOrCity.trim() || undefined,
+        category,
+        cuisineOrSpecialty: cuisineOrSpecialty.trim() || undefined
       });
 
       navigation.navigate({
@@ -155,6 +158,12 @@ export function AddPlaceScreen({ navigation }: AddPlaceScreenProps) {
         },
         candidates
       });
+    } catch (error) {
+      const message =
+        error instanceof Error
+          ? error.message
+          : 'Place search is unavailable right now.';
+      Alert.alert('Place search failed', message);
     } finally {
       setIsSearching(false);
     }

@@ -1,0 +1,127 @@
+import type { SupabaseClient } from '@supabase/supabase-js';
+
+import { SavedPlaceRow } from '../../lib/supabaseClient';
+import { PlaceCard } from '../../types/place';
+import { PlaceUpdate, SavedPlacesRepository } from './types';
+
+type SavedPlacesSupabaseClient = SupabaseClient;
+
+const mapRowToPlace = (row: SavedPlaceRow): PlaceCard => ({
+  id: row.id,
+  placeName: row.name,
+  address: row.address,
+  areaCity: row.area_or_city,
+  category: row.category,
+  cuisineOrSpecialty: row.cuisine_or_specialty ?? undefined,
+  tags: row.tags,
+  notes: row.notes ?? undefined,
+  sourceInstagramUrl: row.source_url,
+  placeId: row.place_id ?? undefined,
+  mapUrl: row.map_url ?? undefined,
+  status: row.status,
+  createdAt: row.created_at,
+  updatedAt: row.updated_at
+});
+
+const mapPlaceToRow = (place: PlaceCard): SavedPlaceRow => ({
+  id: place.id,
+  name: place.placeName,
+  address: place.address,
+  area_or_city: place.areaCity,
+  category: place.category,
+  cuisine_or_specialty: place.cuisineOrSpecialty ?? null,
+  tags: place.tags,
+  notes: place.notes ?? null,
+  source_url: place.sourceInstagramUrl,
+  place_id: place.placeId ?? null,
+  map_url: place.mapUrl ?? null,
+  status: place.status,
+  created_at: place.createdAt,
+  updated_at: place.updatedAt
+});
+
+const mapPlaceUpdateToRow = (updates: PlaceUpdate): Partial<SavedPlaceRow> => ({
+  ...(updates.placeName !== undefined ? { name: updates.placeName } : {}),
+  ...(updates.address !== undefined ? { address: updates.address } : {}),
+  ...(updates.areaCity !== undefined ? { area_or_city: updates.areaCity } : {}),
+  ...(updates.category !== undefined ? { category: updates.category } : {}),
+  ...(updates.cuisineOrSpecialty !== undefined
+    ? { cuisine_or_specialty: updates.cuisineOrSpecialty ?? null }
+    : {}),
+  ...(updates.tags !== undefined ? { tags: updates.tags } : {}),
+  ...(updates.notes !== undefined ? { notes: updates.notes ?? null } : {}),
+  ...(updates.sourceInstagramUrl !== undefined
+    ? { source_url: updates.sourceInstagramUrl }
+    : {}),
+  ...(updates.placeId !== undefined ? { place_id: updates.placeId ?? null } : {}),
+  ...(updates.mapUrl !== undefined ? { map_url: updates.mapUrl ?? null } : {}),
+  ...(updates.status !== undefined ? { status: updates.status } : {}),
+  updated_at: new Date().toISOString()
+});
+
+const toSupabaseError = (action: string, message?: string) =>
+  new Error(`Supabase saved places ${action} failed${message ? `: ${message}` : '.'}`);
+
+export class SupabaseSavedPlacesRepository implements SavedPlacesRepository {
+  readonly kind = 'supabase';
+
+  constructor(private readonly supabase: SavedPlacesSupabaseClient) {}
+
+  async listPlaces() {
+    const { data, error } = await this.supabase
+      .from('saved_places')
+      .select('*')
+      .order('created_at', { ascending: false });
+
+    if (error) {
+      throw toSupabaseError('read', error.message);
+    }
+
+    return (data ?? []).map(mapRowToPlace);
+  }
+
+  async createPlace(place: PlaceCard) {
+    const { data, error } = await this.supabase
+      .from('saved_places')
+      .insert(mapPlaceToRow(place))
+      .select()
+      .single();
+
+    if (error) {
+      throw toSupabaseError('create', error.message);
+    }
+
+    if (!data) {
+      throw toSupabaseError('create');
+    }
+
+    return mapRowToPlace(data);
+  }
+
+  async updatePlace(id: string, updates: PlaceUpdate) {
+    const { data, error } = await this.supabase
+      .from('saved_places')
+      .update(mapPlaceUpdateToRow(updates))
+      .eq('id', id)
+      .select()
+      .single();
+
+    if (error) {
+      throw toSupabaseError('update', error.message);
+    }
+
+    if (!data) {
+      throw toSupabaseError('update');
+    }
+
+    return mapRowToPlace(data);
+  }
+
+  async deletePlace(id: string) {
+    const { error } = await this.supabase.from('saved_places').delete().eq('id', id);
+
+    if (error) {
+      throw toSupabaseError('delete', error.message);
+    }
+  }
+}

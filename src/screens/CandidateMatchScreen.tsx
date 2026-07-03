@@ -1,4 +1,4 @@
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppButton } from '../components/AppButton';
 import { AppNavigation } from '../navigation/types';
@@ -23,7 +23,7 @@ export function CandidateMatchScreen({
   const mergeUnique = (values: string[]) =>
     Array.from(new Set(values.map((value) => value.trim()).filter(Boolean)));
 
-  const handleSaveCandidate = (candidate: PlaceCandidate) => {
+  const handleSaveCandidate = async (candidate: PlaceCandidate) => {
     const extraction = draft.extraction;
     const mergedTags = mergeUnique([
       ...candidate.tags,
@@ -35,7 +35,7 @@ export function CandidateMatchScreen({
       : undefined;
     const notes = [draft.notes, visibleCluesNote].filter(Boolean).join('\n\n') || undefined;
 
-    const savedPlace = addPlace({
+    const savedPlace = await addPlace({
       placeName: candidate.name,
       address: candidate.address,
       areaCity: candidate.areaCity,
@@ -50,7 +50,42 @@ export function CandidateMatchScreen({
       status: 'want_to_go'
     });
 
-    navigation.navigate({ name: 'PlaceDetail', placeId: savedPlace.id });
+    if (savedPlace) {
+      navigation.navigate({ name: 'PlaceDetail', placeId: savedPlace.id });
+    } else {
+      Alert.alert('Save failed', 'The place could not be saved. Check the storage error.');
+    }
+  };
+
+  const handleSaveManually = async () => {
+    const extraction = draft.extraction;
+    const manualTags = mergeUnique([
+      ...(extraction?.vibe_tags ?? []),
+      ...(extraction?.recommended_items ?? []),
+      'manual-match'
+    ]);
+    const visibleCluesNote = extraction?.visible_clues.length
+      ? `Visible clues: ${extraction.visible_clues.join(', ')}`
+      : undefined;
+    const notes = [draft.notes, visibleCluesNote].filter(Boolean).join('\n\n') || undefined;
+
+    const savedPlace = await addPlace({
+      placeName: extraction?.place_name || draft.suggestedPlaceName,
+      address: 'Address to confirm',
+      areaCity: extraction?.area_or_city || 'Area to confirm',
+      category: extraction?.category || 'other',
+      cuisineOrSpecialty: extraction?.cuisine_or_specialty || undefined,
+      tags: manualTags,
+      notes,
+      sourceInstagramUrl: draft.sourceInstagramUrl,
+      status: 'want_to_go'
+    });
+
+    if (savedPlace) {
+      navigation.navigate({ name: 'PlaceDetail', placeId: savedPlace.id });
+    } else {
+      Alert.alert('Save failed', 'The manual place could not be saved.');
+    }
   };
 
   return (
@@ -80,6 +115,8 @@ export function CandidateMatchScreen({
         ) : null}
       </View>
 
+      <AppButton label="Save Manually" onPress={handleSaveManually} variant="secondary" />
+
       <FlatList
         contentContainerStyle={styles.listContent}
         data={candidates}
@@ -87,7 +124,7 @@ export function CandidateMatchScreen({
         ListEmptyComponent={
           <View style={styles.emptyState}>
             <Text style={styles.emptyTitle}>No candidates found.</Text>
-            <Text style={styles.emptyBody}>Go back and adjust the place name.</Text>
+            <Text style={styles.emptyBody}>Save manually or go back and adjust the place name.</Text>
           </View>
         }
         renderItem={({ item }) => (
@@ -123,6 +160,12 @@ function CandidateRow({
       <Text style={styles.address}>{candidate.address}</Text>
       {candidate.cuisineOrSpecialty ? (
         <Text style={styles.specialty}>{candidate.cuisineOrSpecialty}</Text>
+      ) : null}
+      {candidate.rating ? (
+        <Text style={styles.rating}>
+          Rating {candidate.rating.toFixed(1)}
+          {candidate.userRatingCount ? ` (${candidate.userRatingCount})` : ''}
+        </Text>
       ) : null}
     </Pressable>
   );
@@ -229,6 +272,11 @@ const styles = StyleSheet.create({
     color: colors.accent,
     fontSize: 14,
     fontWeight: '800'
+  },
+  rating: {
+    color: colors.muted,
+    fontSize: 13,
+    fontWeight: '700'
   },
   emptyState: {
     alignItems: 'center',

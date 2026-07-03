@@ -1,75 +1,59 @@
 import {
   createContext,
   ReactNode,
-  useCallback,
   useContext,
   useEffect,
   useMemo,
   useState
 } from 'react';
 
-import { initialSavedPlaces } from '../data/mockPlaces';
-import { placesStorage } from '../storage/placesStorage';
+import {
+  createSavedPlacesRepository,
+  PlaceInput,
+  PlaceUpdate
+} from '../repositories/savedPlaces';
 import { PlaceCard } from '../types/place';
-
-type PlaceInput = Omit<PlaceCard, 'id' | 'createdAt' | 'updatedAt'>;
-type PlaceUpdate = Partial<Omit<PlaceCard, 'id' | 'createdAt' | 'updatedAt'>>;
 
 type PlacesContextValue = {
   places: PlaceCard[];
   isLoading: boolean;
   storageError?: string;
-  addPlace: (place: PlaceInput) => PlaceCard;
-  updatePlace: (id: string, updates: PlaceUpdate) => void;
-  updatePlaceStatus: (id: string, status: PlaceCard['status']) => void;
-  deletePlace: (id: string) => void;
+  addPlace: (place: PlaceInput) => Promise<PlaceCard | undefined>;
+  updatePlace: (id: string, updates: PlaceUpdate) => Promise<boolean>;
+  updatePlaceStatus: (id: string, status: PlaceCard['status']) => Promise<boolean>;
+  deletePlace: (id: string) => Promise<boolean>;
 };
 
 const PlacesContext = createContext<PlacesContextValue | undefined>(undefined);
 
 const makeId = () => `place-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
+const getErrorMessage = (fallback: string, error: unknown) =>
+  error instanceof Error ? error.message : fallback;
 
 export function PlacesProvider({ children }: { children: ReactNode }) {
+  const repository = useMemo(() => createSavedPlacesRepository(), []);
   const [places, setPlaces] = useState<PlaceCard[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [storageError, setStorageError] = useState<string | undefined>();
-
-  const persistPlaces = useCallback((nextPlaces: PlaceCard[]) => {
-    placesStorage
-      .savePlaces(nextPlaces)
-      .then(() => setStorageError(undefined))
-      .catch((error: unknown) => {
-        const message =
-          error instanceof Error ? error.message : 'Saved places could not be stored.';
-        setStorageError(message);
-      });
-  }, []);
 
   useEffect(() => {
     let isMounted = true;
 
     const hydratePlaces = async () => {
       try {
-        const storedPlaces = await placesStorage.loadPlaces();
-        const startingPlaces = storedPlaces ?? initialSavedPlaces;
+        const savedPlaces = await repository.listPlaces();
 
         if (!isMounted) {
           return;
         }
 
-        setPlaces(startingPlaces);
+        setPlaces(savedPlaces);
         setStorageError(undefined);
-
-        if (!storedPlaces) {
-          persistPlaces(startingPlaces);
-        }
       } catch (error) {
-        const message =
-          error instanceof Error ? error.message : 'Saved places could not be loaded.';
-
         if (isMounted) {
-          setPlaces(initialSavedPlaces);
-          setStorageError(message);
+          setStorageError(
+            getErrorMessage('Saved places could not be loaded.', error)
+          );
         }
       } finally {
         if (isMounted) {
@@ -83,14 +67,14 @@ export function PlacesProvider({ children }: { children: ReactNode }) {
     return () => {
       isMounted = false;
     };
-  }, [persistPlaces]);
+  }, [repository]);
 
   const value = useMemo<PlacesContextValue>(
     () => ({
       places,
       isLoading,
       storageError,
-      addPlace: (place) => {
+      addPlace: async (place) => {
         const now = new Date().toISOString();
         const savedPlace: PlaceCard = {
           ...place,
@@ -99,47 +83,76 @@ export function PlacesProvider({ children }: { children: ReactNode }) {
           updatedAt: now
         };
 
-        setPlaces((currentPlaces) => {
-          const nextPlaces = [savedPlace, ...currentPlaces];
-          persistPlaces(nextPlaces);
-          return nextPlaces;
-        });
+        try {
+          const persistedPlace = await repository.createPlace(savedPlace);
 
-        return savedPlace;
-      },
-      updatePlace: (id, updates) => {
-        setPlaces((currentPlaces) => {
-          const now = new Date().toISOString();
-          const nextPlaces = currentPlaces.map((place) =>
-            place.id === id ? { ...place, ...updates, updatedAt: now } : place
+          setPlaces((currentPlaces) => [
+            persistedPlace,
+            ...currentPlaces.filter((currentPlace) => currentPlace.id !== persistedPlace.id)
+          ]);
+          setStorageError(undefined);
+
+          return persistedPlace;
+        } catch (error) {
+          setStorageError(
+            getErrorMessage('Saved place could not be created.', error)
           );
-
-          persistPlaces(nextPlaces);
-          return nextPlaces;
-        });
+          return undefined;
+        }
       },
-      updatePlaceStatus: (id, status) => {
-        setPlaces((currentPlaces) => {
-          const now = new Date().toISOString();
-          const nextPlaces = currentPlaces.map((place) =>
-            place.id === id
-              ? { ...place, status, updatedAt: now }
-              : place
+      updatePlace: async (id, updates) => {
+        try {
+          const persistedPlace = await repository.updatePlace(id, updates);
+
+          setPlaces((currentPlaces) =>
+            currentPlaces.map((place) =>
+              place.id === id ? persistedPlace : place
+            )
           );
-
-          persistPlaces(nextPlaces);
-          return nextPlaces;
-        });
+          setStorageError(undefined);
+          return true;
+        } catch (error) {
+          setStorageError(
+            getErrorMessage('Saved place could not be updated.', error)
+          );
+          return false;
+        }
       },
-      deletePlace: (id) => {
-        setPlaces((currentPlaces) => {
-          const nextPlaces = currentPlaces.filter((place) => place.id !== id);
-          persistPlaces(nextPlaces);
-          return nextPlaces;
-        });
+      updatePlaceStatus: async (id, status) => {
+        try {
+          const persistedPlace = await repository.updatePlace(id, { status });
+
+          setPlaces((currentPlaces) =>
+            currentPlaces.map((place) =>
+              place.id === id ? persistedPlace : place
+            )
+          );
+          setStorageError(undefined);
+          return true;
+        } catch (error) {
+          setStorageError(
+            getErrorMessage('Saved place status could not be updated.', error)
+          );
+          return false;
+        }
+      },
+      deletePlace: async (id) => {
+        try {
+          await repository.deletePlace(id);
+          setPlaces((currentPlaces) =>
+            currentPlaces.filter((place) => place.id !== id)
+          );
+          setStorageError(undefined);
+          return true;
+        } catch (error) {
+          setStorageError(
+            getErrorMessage('Saved place could not be deleted.', error)
+          );
+          return false;
+        }
       }
     }),
-    [isLoading, persistPlaces, places, storageError]
+    [isLoading, places, repository, storageError]
   );
 
   return <PlacesContext.Provider value={value}>{children}</PlacesContext.Provider>;

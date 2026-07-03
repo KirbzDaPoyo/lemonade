@@ -28,9 +28,14 @@ export function PlaceDetailScreen({ navigation, placeId }: PlaceDetailScreenProp
       {
         text: 'Delete',
         style: 'destructive',
-        onPress: () => {
-          deletePlace(place.id);
-          navigation.resetToHome();
+        onPress: async () => {
+          const didDelete = await deletePlace(place.id);
+
+          if (didDelete) {
+            navigation.resetToHome();
+          } else {
+            Alert.alert('Delete failed', 'The place could not be deleted.');
+          }
         }
       }
     ]);
