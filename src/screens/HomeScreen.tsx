@@ -5,9 +5,10 @@ import { AppButton } from '../components/AppButton';
 import { FilterBar } from '../components/FilterBar';
 import { PlaceCardRow } from '../components/PlaceCardRow';
 import { AppNavigation } from '../navigation/types';
+import { findPlaceFilterOption, getPlaceFilterOptions, PlaceFilterKey } from '../services/placeFilters';
 import { usePlaces } from '../store/PlacesContext';
 import { colors, spacing } from '../theme';
-import { PlaceCategory, PlaceStatus } from '../types/place';
+import { PlaceStatus } from '../types/place';
 
 type HomeScreenProps = {
   navigation: AppNavigation;
@@ -16,19 +17,21 @@ type HomeScreenProps = {
 export function HomeScreen({ navigation }: HomeScreenProps) {
   const { isLoading, places, storageError } = usePlaces();
   const [selectedStatus, setSelectedStatus] = useState<PlaceStatus | 'all'>('all');
-  const [selectedCategory, setSelectedCategory] = useState<PlaceCategory | 'all'>('all');
+  const [selectedPlaceFilter, setSelectedPlaceFilter] = useState<PlaceFilterKey>('all');
+
+  const placeFilterOptions = useMemo(() => getPlaceFilterOptions(places), [places]);
 
   const filteredPlaces = useMemo(
     () =>
       places.filter((place) => {
         const matchesStatus =
           selectedStatus === 'all' || place.status === selectedStatus;
-        const matchesCategory =
-          selectedCategory === 'all' || place.category === selectedCategory;
+        const placeFilter = findPlaceFilterOption(placeFilterOptions, selectedPlaceFilter);
+        const matchesPlaceFilter = placeFilter.matchesPlace(place);
 
-        return matchesStatus && matchesCategory;
+        return matchesStatus && matchesPlaceFilter;
       }),
-    [places, selectedCategory, selectedStatus]
+    [placeFilterOptions, places, selectedPlaceFilter, selectedStatus]
   );
 
   return (
@@ -46,10 +49,11 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
       </View>
 
       <FilterBar
-        selectedCategory={selectedCategory}
         selectedStatus={selectedStatus}
-        onCategoryChange={setSelectedCategory}
+        selectedPlaceFilter={selectedPlaceFilter}
+        placeFilterOptions={placeFilterOptions}
         onStatusChange={setSelectedStatus}
+        onPlaceFilterChange={setSelectedPlaceFilter}
       />
 
       {storageError ? (

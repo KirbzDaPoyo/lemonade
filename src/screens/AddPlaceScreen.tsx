@@ -33,9 +33,6 @@ const getSearchQuery = (extraction: PlaceExtractionResult, manualPlaceName: stri
 export function AddPlaceScreen({ navigation }: AddPlaceScreenProps) {
   const [sourceInstagramUrl, setSourceInstagramUrl] = useState('');
   const [manualPlaceName, setManualPlaceName] = useState('');
-  const [userHint, setUserHint] = useState('');
-  const [captionText, setCaptionText] = useState('');
-  const [notes, setNotes] = useState('');
   const [isFindingPlace, setIsFindingPlace] = useState(false);
   const [needsManualQuery, setNeedsManualQuery] = useState(false);
 
@@ -63,10 +60,7 @@ export function AddPlaceScreen({ navigation }: AddPlaceScreenProps) {
       draft: {
         sourceInstagramUrl: sourceInstagramUrl.trim(),
         suggestedPlaceName: extraction.placeName ?? searchQuery,
-        extraction,
-        notes: notes.trim() || undefined,
-        captionText: captionText.trim() || undefined,
-        userHint: userHint.trim() || undefined
+        extraction
       },
       candidates
     });
@@ -119,15 +113,11 @@ export function AddPlaceScreen({ navigation }: AddPlaceScreenProps) {
 
         extraction = await placeExtractionService.extractPlace({
           sourceUrl: sourceInstagramUrl.trim(),
-          captionText: captionText.trim() || undefined,
-          userHint: userHint.trim() || undefined,
           instagramImport
         });
       } catch {
         extraction = await placeExtractionService.extractPlace({
-          sourceUrl: sourceInstagramUrl.trim(),
-          captionText: captionText.trim() || undefined,
-          userHint: userHint.trim() || manualPlaceName.trim() || undefined
+          sourceUrl: sourceInstagramUrl.trim()
         });
       }
 
@@ -137,7 +127,7 @@ export function AddPlaceScreen({ navigation }: AddPlaceScreenProps) {
         setNeedsManualQuery(true);
         Alert.alert(
           "I couldn't identify the place from this reel.",
-          'What should we search? Add a place name or hint, then try again.'
+          'What should we search? Add a place name, then try again.'
         );
         return;
       }
@@ -193,55 +183,19 @@ export function AddPlaceScreen({ navigation }: AddPlaceScreenProps) {
             </Text>
           </View>
         ) : null}
-
-        <View style={styles.fieldGroup}>
-          <Text style={styles.label}>Place name or hint</Text>
-          <TextInput
-            autoCapitalize="words"
-            onChangeText={setManualPlaceName}
-            placeholder="Lemon House Cafe"
-            placeholderTextColor={colors.muted}
-            style={styles.input}
-            value={manualPlaceName}
-          />
-        </View>
-
-        <View style={styles.fieldGroup}>
-          <Text style={styles.label}>Caption text</Text>
-          <TextInput
-            multiline
-            onChangeText={setCaptionText}
-            placeholder="Optional caption pasted by you"
-            placeholderTextColor={colors.muted}
-            style={[styles.input, styles.textArea]}
-            textAlignVertical="top"
-            value={captionText}
-          />
-        </View>
-
-        <View style={styles.fieldGroup}>
-          <Text style={styles.label}>Extra hint</Text>
-          <TextInput
-            onChangeText={setUserHint}
-            placeholder="Optional area, cuisine, or clue"
-            placeholderTextColor={colors.muted}
-            style={styles.input}
-            value={userHint}
-          />
-        </View>
-
-        <View style={styles.fieldGroup}>
-          <Text style={styles.label}>Notes</Text>
-          <TextInput
-            multiline
-            onChangeText={setNotes}
-            placeholder="What caught your eye?"
-            placeholderTextColor={colors.muted}
-            style={[styles.input, styles.textArea]}
-            textAlignVertical="top"
-            value={notes}
-          />
-        </View>
+        {needsManualQuery ? (
+          <View style={styles.fieldGroup}>
+            <Text style={styles.label}>Place name or search</Text>
+            <TextInput
+              autoCapitalize="words"
+              onChangeText={setManualPlaceName}
+              placeholder="Lemon House Cafe"
+              placeholderTextColor={colors.muted}
+              style={styles.input}
+              value={manualPlaceName}
+            />
+          </View>
+        ) : null}
 
         <AppButton
           disabled={!canSearch}
@@ -296,9 +250,6 @@ const styles = StyleSheet.create({
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.md
   },
-  textArea: {
-    minHeight: 96
-  },
   promptBox: {
     backgroundColor: '#fff8eb',
     borderColor: colors.accent,
@@ -313,3 +264,4 @@ const styles = StyleSheet.create({
     lineHeight: 20
   }
 });
+

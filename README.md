@@ -7,12 +7,12 @@ The MVP is intentionally based on user-initiated sharing or pasting. It stores t
 ## What is included
 
 - Saved Places list with status and category filters
-- Add Place screen for an Instagram URL, place name, optional caption text, and notes
-- Mock extraction service for AI-ready caption/notes parsing without calling a real AI API
+- Add Place screen for an Instagram URL with a manual search fallback
+- Mock extraction service for AI-ready Instagram metadata parsing without calling a real AI API
 - Mock place-search service that returns candidate matches
 - Optional Instagram metadata import through Apify, called only from a Supabase Edge Function
 - Candidate confirmation flow
-- Place Detail screen with source URL, map URL, tags, notes, and status updates
+- Place Detail screen with source URL, map URL, tags, editable notes, and status updates
 - Local persistence for saved places using Expo-compatible AsyncStorage
 - Optional Supabase-backed saved places repository with local fallback
 - TypeScript domain models and service interfaces designed for a future Google Places or Supabase integration
@@ -85,6 +85,12 @@ src/
   types/                   Domain types for place cards and filters
   utils/                   Display labels and formatting helpers
 ```
+
+## Curated Tags
+
+Saved place tags are intentionally normalized into a controlled, filterable vocabulary. Instagram hashtags and account-like signals are used as extraction clues, but noisy social tags such as `fyp`, `hkblog`, `hkliving`, generic foodie tags, and travel/blog hashtags are not saved as place tags.
+
+The tag normalizer lives in `src/services/tags/placeTagNormalizer.ts`. It maps useful cuisine, vibe, and context clues into tags such as `coffee`, `bakery`, `ramen`, `late_night`, `self_service`, `date_spot`, and `work_friendly`. Home includes a tag filter row based on the curated tags currently present in saved places.
 
 ## Supabase Setup
 
@@ -201,3 +207,5 @@ By default the function uses `locationBias`, not `locationRestriction`, so Googl
 - Replace `src/services/placeExtraction/mockPlaceExtractionService.ts` with a real AI provider when extraction is ready. Keep that provider behind a backend function so API keys are not exposed in Expo.
 - Add Supabase auth and user-scoped saved-place policies before multi-user production testing.
 - Add auth only after the local save flow and database schema are stable.
+
+

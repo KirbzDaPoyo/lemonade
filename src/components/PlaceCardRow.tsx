@@ -1,5 +1,6 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { getTagLabel } from '../services/tags/placeTagNormalizer';
 import { colors, radii, spacing } from '../theme';
 import { PlaceCard } from '../types/place';
 import { categoryLabels, statusLabels } from '../utils/labels';
@@ -35,7 +36,7 @@ export function PlaceCardRow({ place, onPress }: PlaceCardRowProps) {
       <View style={styles.tagRow}>
         {place.tags.slice(0, 3).map((tag) => (
           <View key={tag} style={styles.tag}>
-            <Text style={styles.tagText}>{tag}</Text>
+            <Text style={styles.tagText}>{getTagLabel(tag)}</Text>
           </View>
         ))}
       </View>

@@ -1,125 +1,196 @@
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { PlaceFilterKey, PlaceFilterOption } from '../services/placeFilters';
 import { colors, radii, spacing } from '../theme';
-import { PlaceCategory, PlaceStatus } from '../types/place';
-import { categoryLabels, statusLabels } from '../utils/labels';
+import { PlaceStatus } from '../types/place';
+import { statusLabels } from '../utils/labels';
 
 type FilterBarProps = {
   selectedStatus: PlaceStatus | 'all';
-  selectedCategory: PlaceCategory | 'all';
+  selectedPlaceFilter: PlaceFilterKey;
+  placeFilterOptions: PlaceFilterOption[];
   onStatusChange: (status: PlaceStatus | 'all') => void;
-  onCategoryChange: (category: PlaceCategory | 'all') => void;
+  onPlaceFilterChange: (filter: PlaceFilterKey) => void;
 };
 
-const statusOptions: Array<PlaceStatus | 'all'> = [
-  'all',
-  'want_to_go',
-  'visited',
-  'favorite',
-  'skip'
+type DropdownOption<T extends string> = {
+  value: T;
+  label: string;
+};
+
+const statusOptions: Array<DropdownOption<PlaceStatus | 'all'>> = [
+  { value: 'all', label: 'All status' },
+  { value: 'want_to_go', label: statusLabels.want_to_go },
+  { value: 'visited', label: statusLabels.visited },
+  { value: 'favorite', label: statusLabels.favorite },
+  { value: 'skip', label: statusLabels.skip }
 ];
-
-const categoryOptions: Array<PlaceCategory | 'all'> = [
-  'all',
-  'cafe',
-  'restaurant',
-  'street_food',
-  'dessert',
-  'bar',
-  'market',
-  'other'
-];
-
-const getStatusLabel = (status: PlaceStatus | 'all') =>
-  status === 'all' ? 'All status' : statusLabels[status];
-
-const getCategoryLabel = (category: PlaceCategory | 'all') =>
-  category === 'all' ? 'All places' : categoryLabels[category];
 
 export function FilterBar({
   selectedStatus,
-  selectedCategory,
+  selectedPlaceFilter,
+  placeFilterOptions,
   onStatusChange,
-  onCategoryChange
+  onPlaceFilterChange
 }: FilterBarProps) {
+  const [openMenu, setOpenMenu] = useState<'status' | 'place' | null>(null);
+  const placeOptions = placeFilterOptions.map((filter) => ({
+    value: filter.key,
+    label: filter.label
+  }));
+
   return (
     <View style={styles.container}>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        <View style={styles.row}>
-          {statusOptions.map((status) => (
-            <FilterChip
-              key={status}
-              label={getStatusLabel(status)}
-              selected={selectedStatus === status}
-              onPress={() => onStatusChange(status)}
-            />
-          ))}
-        </View>
-      </ScrollView>
-      <ScrollView horizontal showsHorizontalScrollIndicator={false}>
-        <View style={styles.row}>
-          {categoryOptions.map((category) => (
-            <FilterChip
-              key={category}
-              label={getCategoryLabel(category)}
-              selected={selectedCategory === category}
-              onPress={() => onCategoryChange(category)}
-            />
-          ))}
-        </View>
-      </ScrollView>
+      <Dropdown
+        label="Status"
+        open={openMenu === 'status'}
+        options={statusOptions}
+        selectedValue={selectedStatus}
+        onToggle={() => setOpenMenu((current) => (current === 'status' ? null : 'status'))}
+        onSelect={(status) => {
+          onStatusChange(status);
+          setOpenMenu(null);
+        }}
+      />
+      <Dropdown
+        label="Place"
+        open={openMenu === 'place'}
+        options={placeOptions}
+        selectedValue={selectedPlaceFilter}
+        onToggle={() => setOpenMenu((current) => (current === 'place' ? null : 'place'))}
+        onSelect={(filter) => {
+          onPlaceFilterChange(filter);
+          setOpenMenu(null);
+        }}
+      />
     </View>
   );
 }
 
-function FilterChip({
+function Dropdown<T extends string>({
   label,
-  selected,
-  onPress
+  open,
+  options,
+  selectedValue,
+  onToggle,
+  onSelect
 }: {
   label: string;
-  selected: boolean;
-  onPress: () => void;
+  open: boolean;
+  options: Array<DropdownOption<T>>;
+  selectedValue: T;
+  onToggle: () => void;
+  onSelect: (value: T) => void;
 }) {
+  const selectedLabel = options.find((option) => option.value === selectedValue)?.label ?? label;
+
   return (
-    <Pressable
-      accessibilityRole="button"
-      onPress={onPress}
-      style={[styles.chip, selected && styles.selectedChip]}
-    >
-      <Text style={[styles.chipText, selected && styles.selectedText]}>{label}</Text>
-    </Pressable>
+    <View style={styles.dropdown}>
+      <Text style={styles.dropdownLabel}>{label}</Text>
+      <Pressable
+        accessibilityRole="button"
+        onPress={onToggle}
+        style={({ pressed }) => [styles.dropdownButton, pressed && styles.pressed]}
+      >
+        <Text numberOfLines={1} style={styles.dropdownValue}>
+          {selectedLabel}
+        </Text>
+        <Text style={styles.chevron}>{open ? '^' : 'v'}</Text>
+      </Pressable>
+      {open ? (
+        <View style={styles.menu}>
+          {options.map((option) => {
+            const selected = option.value === selectedValue;
+
+            return (
+              <Pressable
+                accessibilityRole="button"
+                key={option.value}
+                onPress={() => onSelect(option.value)}
+                style={({ pressed }) => [
+                  styles.menuItem,
+                  selected && styles.selectedMenuItem,
+                  pressed && styles.pressed
+                ]}
+              >
+                <Text style={[styles.menuItemText, selected && styles.selectedMenuItemText]}>
+                  {option.label}
+                </Text>
+              </Pressable>
+            );
+          })}
+        </View>
+      ) : null}
+    </View>
   );
 }
 
 const styles = StyleSheet.create({
   container: {
-    gap: spacing.sm
+    gap: spacing.md
   },
-  row: {
-    flexDirection: 'row',
-    gap: spacing.sm,
-    paddingRight: spacing.lg
+  dropdown: {
+    gap: spacing.xs
   },
-  chip: {
+  dropdownLabel: {
+    color: colors.muted,
+    fontSize: 12,
+    fontWeight: '900',
+    textTransform: 'uppercase'
+  },
+  dropdownButton: {
+    alignItems: 'center',
     backgroundColor: colors.surface,
     borderColor: colors.border,
     borderRadius: radii.md,
     borderWidth: 1,
-    minHeight: 36,
+    flexDirection: 'row',
+    justifyContent: 'space-between',
+    minHeight: 44,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm
   },
-  selectedChip: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary
-  },
-  chipText: {
+  dropdownValue: {
     color: colors.text,
-    fontSize: 14,
-    fontWeight: '600'
+    flex: 1,
+    fontSize: 15,
+    fontWeight: '800'
   },
-  selectedText: {
-    color: colors.surface
+  chevron: {
+    color: colors.primary,
+    fontSize: 12,
+    fontWeight: '900',
+    marginLeft: spacing.md
+  },
+  menu: {
+    backgroundColor: colors.surface,
+    borderColor: colors.border,
+    borderRadius: radii.md,
+    borderWidth: 1,
+    overflow: 'hidden'
+  },
+  menuItem: {
+    borderBottomColor: colors.border,
+    borderBottomWidth: 1,
+    minHeight: 42,
+    justifyContent: 'center',
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.sm
+  },
+  selectedMenuItem: {
+    backgroundColor: colors.surfaceMuted
+  },
+  menuItemText: {
+    color: colors.text,
+    fontSize: 15,
+    fontWeight: '700'
+  },
+  selectedMenuItemText: {
+    color: colors.primary,
+    fontWeight: '900'
+  },
+  pressed: {
+    opacity: 0.82
   }
 });

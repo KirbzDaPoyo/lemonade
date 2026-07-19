@@ -2,6 +2,7 @@ import { Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native
 
 import { AppButton } from '../components/AppButton';
 import { AppNavigation } from '../navigation/types';
+import { normalizePlaceTags } from '../services/tags/placeTagNormalizer';
 import { usePlaces } from '../store/PlacesContext';
 import { colors, radii, spacing } from '../theme';
 import { DraftPlaceEntry, PlaceCandidate } from '../types/place';
@@ -20,30 +21,29 @@ export function CandidateMatchScreen({
 }: CandidateMatchScreenProps) {
   const { addPlace } = usePlaces();
 
-  const mergeUnique = (values: string[]) =>
-    Array.from(new Set(values.map((value) => value.trim()).filter(Boolean)));
 
   const handleSaveCandidate = async (candidate: PlaceCandidate) => {
     const extraction = draft.extraction;
-    const mergedTags = mergeUnique([
-      ...candidate.tags,
-      ...(extraction?.vibeTags ?? []),
-      ...(extraction?.recommendedItems ?? [])
-    ]);
-    const visibleCluesNote = extraction?.visibleClues.length
-      ? `Visible clues: ${extraction.visibleClues.join(', ')}`
-      : undefined;
-    const notes = [draft.notes, visibleCluesNote].filter(Boolean).join('\n\n') || undefined;
+    const cuisineOrSpecialty =
+      candidate.cuisineOrSpecialty || extraction?.cuisineOrSpecialty || undefined;
+    const mergedTags = normalizePlaceTags({
+      placeName: candidate.name,
+      category: candidate.category,
+      cuisineOrSpecialty,
+      signals: [
+        ...candidate.tags,
+        ...(extraction?.vibeTags ?? []),
+        ...(extraction?.recommendedItems ?? []),
+      ]
+    });
 
     const savedPlace = await addPlace({
       placeName: candidate.name,
       address: candidate.address,
       areaCity: candidate.areaCity,
       category: candidate.category,
-      cuisineOrSpecialty:
-        candidate.cuisineOrSpecialty || extraction?.cuisineOrSpecialty || undefined,
+      cuisineOrSpecialty,
       tags: mergedTags,
-      notes,
       sourceInstagramUrl: draft.sourceInstagramUrl,
       mapUrl: candidate.mapUrl,
       placeId: candidate.providerPlaceId,
@@ -59,15 +59,15 @@ export function CandidateMatchScreen({
 
   const handleSaveManually = async () => {
     const extraction = draft.extraction;
-    const manualTags = mergeUnique([
-      ...(extraction?.vibeTags ?? []),
-      ...(extraction?.recommendedItems ?? []),
-      'manual-match'
-    ]);
-    const visibleCluesNote = extraction?.visibleClues.length
-      ? `Visible clues: ${extraction.visibleClues.join(', ')}`
-      : undefined;
-    const notes = [draft.notes, visibleCluesNote].filter(Boolean).join('\n\n') || undefined;
+    const manualTags = normalizePlaceTags({
+      placeName: extraction?.placeName || draft.suggestedPlaceName,
+      category: extraction?.category || 'other',
+      cuisineOrSpecialty: extraction?.cuisineOrSpecialty || undefined,
+      signals: [
+        ...(extraction?.vibeTags ?? []),
+        ...(extraction?.recommendedItems ?? []),
+      ]
+    });
 
     const savedPlace = await addPlace({
       placeName: extraction?.placeName || draft.suggestedPlaceName,
@@ -76,7 +76,6 @@ export function CandidateMatchScreen({
       category: extraction?.category || 'other',
       cuisineOrSpecialty: extraction?.cuisineOrSpecialty || undefined,
       tags: manualTags,
-      notes,
       sourceInstagramUrl: draft.sourceInstagramUrl,
       status: 'want_to_go'
     });
@@ -298,3 +297,4 @@ const styles = StyleSheet.create({
     fontSize: 15
   }
 });
+

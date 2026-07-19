@@ -1,4 +1,5 @@
 import { inferGeoContext } from '../../config/geoContext';
+import { normalizePlaceTags } from '../tags/placeTagNormalizer';
 import type { PlaceExtractionResult, PlaceSearchCandidate, PlaceSearchSourceSignal } from '../../types/extraction';
 import type { PlaceCategory } from '../../types/place';
 import type { PlaceExtractionInput, PlaceExtractionService } from './types';
@@ -567,10 +568,12 @@ export const mockPlaceExtractionService: PlaceExtractionService = {
       category,
       cuisineOrSpecialty,
       recommendedItems: specialties,
-      vibeTags: unique(
-        [...(category ? [category] : []), ...specialties, ...(importData?.hashtags ?? []).slice(0, 6)],
-        (value) => value
-      ),
+      vibeTags: normalizePlaceTags({
+        placeName,
+        category,
+        cuisineOrSpecialty,
+        signals: [combinedText, ...specialties, ...(importData?.hashtags ?? [])]
+      }),
       visibleClues: [
         'Instagram URL was provided by the user.',
         ...(rawCaption ? ['Caption text was parsed for place signals.'] : []),

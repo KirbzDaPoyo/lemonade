@@ -1,7 +1,9 @@
-import { Alert, Linking, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useState } from 'react';
+import { Alert, Linking, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { AppButton } from '../components/AppButton';
 import { AppNavigation } from '../navigation/types';
+import { getTagLabel } from '../services/tags/placeTagNormalizer';
 import { usePlaces } from '../store/PlacesContext';
 import { colors, radii, spacing } from '../theme';
 import { PlaceStatus } from '../types/place';
@@ -15,8 +17,53 @@ type PlaceDetailScreenProps = {
 const statusOptions: PlaceStatus[] = ['want_to_go', 'visited', 'favorite', 'skip'];
 
 export function PlaceDetailScreen({ navigation, placeId }: PlaceDetailScreenProps) {
-  const { deletePlace, places, storageError, updatePlaceStatus } = usePlaces();
+  const { deletePlace, places, storageError, updatePlace, updatePlaceStatus } = usePlaces();
   const place = places.find((savedPlace) => savedPlace.id === placeId);
+  const [notesDraft, setNotesDraft] = useState('');
+  const [isSavingNotes, setIsSavingNotes] = useState(false);
+  useEffect(() => {
+    setNotesDraft(place?.notes ?? '');
+  }, [place?.id, place?.notes]);
+
+  const handleSaveNotes = async () => {
+    if (!place) {
+      return;
+    }
+
+    setIsSavingNotes(true);
+
+    try {
+      const didUpdate = await updatePlace(place.id, {
+        notes: notesDraft.trim() || undefined
+      });
+
+      if (!didUpdate) {
+        Alert.alert('Notes not saved', 'The notes could not be updated.');
+      }
+    } finally {
+      setIsSavingNotes(false);
+    }
+  };
+
+  const handleClearNotes = async () => {
+    setNotesDraft('');
+
+    if (!place?.notes) {
+      return;
+    }
+
+    setIsSavingNotes(true);
+
+    try {
+      const didUpdate = await updatePlace(place.id, { notes: undefined });
+
+      if (!didUpdate) {
+        Alert.alert('Notes not cleared', 'The notes could not be cleared.');
+      }
+    } finally {
+      setIsSavingNotes(false);
+    }
+  };
 
   const handleDelete = () => {
     if (!place) {
@@ -94,14 +141,37 @@ export function PlaceDetailScreen({ navigation, placeId }: PlaceDetailScreenProp
         <View style={styles.tagRow}>
           {place.tags.map((tag) => (
             <View key={tag} style={styles.tag}>
-              <Text style={styles.tagText}>{tag}</Text>
+              <Text style={styles.tagText}>{getTagLabel(tag)}</Text>
             </View>
           ))}
         </View>
       </Section>
 
       <Section title="Notes">
-        <Text style={styles.bodyText}>{place.notes || 'No notes yet.'}</Text>
+        <TextInput
+          multiline
+          onChangeText={setNotesDraft}
+          placeholder="Add your own notes about this place"
+          placeholderTextColor={colors.muted}
+          style={styles.notesInput}
+          textAlignVertical="top"
+          value={notesDraft}
+        />
+        <View style={styles.actionRow}>
+          <AppButton
+            disabled={isSavingNotes || notesDraft.trim() === (place.notes ?? '').trim()}
+            label={isSavingNotes ? 'Saving...' : 'Save Notes'}
+            onPress={handleSaveNotes}
+            style={styles.flexButton}
+          />
+          <AppButton
+            disabled={isSavingNotes || (!notesDraft.trim() && !place.notes)}
+            label="Clear"
+            onPress={handleClearNotes}
+            variant="secondary"
+            style={styles.flexButton}
+          />
+        </View>
       </Section>
 
       <Section title="Source">
@@ -253,10 +323,17 @@ const styles = StyleSheet.create({
     fontSize: 13,
     fontWeight: '800'
   },
-  bodyText: {
+  notesInput: {
+    backgroundColor: colors.background,
+    borderColor: colors.border,
+    borderRadius: radii.md,
+    borderWidth: 1,
     color: colors.text,
     fontSize: 15,
-    lineHeight: 22
+    lineHeight: 22,
+    minHeight: 120,
+    paddingHorizontal: spacing.md,
+    paddingVertical: spacing.md
   },
   linkText: {
     color: colors.primary,
@@ -272,3 +349,5 @@ const styles = StyleSheet.create({
     flexGrow: 1
   }
 });
+
+
