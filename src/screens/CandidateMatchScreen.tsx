@@ -27,11 +27,11 @@ export function CandidateMatchScreen({
     const extraction = draft.extraction;
     const mergedTags = mergeUnique([
       ...candidate.tags,
-      ...(extraction?.vibe_tags ?? []),
-      ...(extraction?.recommended_items ?? [])
+      ...(extraction?.vibeTags ?? []),
+      ...(extraction?.recommendedItems ?? [])
     ]);
-    const visibleCluesNote = extraction?.visible_clues.length
-      ? `Visible clues: ${extraction.visible_clues.join(', ')}`
+    const visibleCluesNote = extraction?.visibleClues.length
+      ? `Visible clues: ${extraction.visibleClues.join(', ')}`
       : undefined;
     const notes = [draft.notes, visibleCluesNote].filter(Boolean).join('\n\n') || undefined;
 
@@ -41,7 +41,7 @@ export function CandidateMatchScreen({
       areaCity: candidate.areaCity,
       category: candidate.category,
       cuisineOrSpecialty:
-        candidate.cuisineOrSpecialty || extraction?.cuisine_or_specialty,
+        candidate.cuisineOrSpecialty || extraction?.cuisineOrSpecialty || undefined,
       tags: mergedTags,
       notes,
       sourceInstagramUrl: draft.sourceInstagramUrl,
@@ -60,21 +60,21 @@ export function CandidateMatchScreen({
   const handleSaveManually = async () => {
     const extraction = draft.extraction;
     const manualTags = mergeUnique([
-      ...(extraction?.vibe_tags ?? []),
-      ...(extraction?.recommended_items ?? []),
+      ...(extraction?.vibeTags ?? []),
+      ...(extraction?.recommendedItems ?? []),
       'manual-match'
     ]);
-    const visibleCluesNote = extraction?.visible_clues.length
-      ? `Visible clues: ${extraction.visible_clues.join(', ')}`
+    const visibleCluesNote = extraction?.visibleClues.length
+      ? `Visible clues: ${extraction.visibleClues.join(', ')}`
       : undefined;
     const notes = [draft.notes, visibleCluesNote].filter(Boolean).join('\n\n') || undefined;
 
     const savedPlace = await addPlace({
-      placeName: extraction?.place_name || draft.suggestedPlaceName,
+      placeName: extraction?.placeName || draft.suggestedPlaceName,
       address: 'Address to confirm',
-      areaCity: extraction?.area_or_city || 'Area to confirm',
+      areaCity: extraction?.areaOrCity || 'Area to confirm',
       category: extraction?.category || 'other',
-      cuisineOrSpecialty: extraction?.cuisine_or_specialty || undefined,
+      cuisineOrSpecialty: extraction?.cuisineOrSpecialty || undefined,
       tags: manualTags,
       notes,
       sourceInstagramUrl: draft.sourceInstagramUrl,
@@ -105,11 +105,12 @@ export function CandidateMatchScreen({
         {draft.extraction ? (
           <View style={styles.extractionSummary}>
             <Text style={styles.extractionSummaryText}>
-              {categoryLabels[draft.extraction.category]} -{' '}
-              {draft.extraction.area_or_city || 'Area to confirm'}
+              {draft.extraction.category
+                ? categoryLabels[draft.extraction.category]
+                : 'Place'} - {draft.extraction.areaOrCity || 'Area to confirm'}
             </Text>
             <Text style={styles.extractionSummaryText}>
-              {draft.extraction.cuisine_or_specialty || 'Specialty to confirm'}
+              {draft.extraction.cuisineOrSpecialty || 'Specialty to confirm'}
             </Text>
           </View>
         ) : null}

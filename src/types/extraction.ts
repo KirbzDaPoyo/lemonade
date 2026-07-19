@@ -1,13 +1,37 @@
+import type { GeoContext } from './geo';
 import type { PlaceCategory } from './place';
 
-export type PlaceExtractionResult = {
-  place_name: string;
-  area_or_city: string;
-  category: PlaceCategory;
-  cuisine_or_specialty: string;
-  recommended_items: string[];
-  vibe_tags: string[];
-  visible_clues: string[];
+export type PlaceSearchSourceSignal =
+  | 'pin_line'
+  | 'raw_handle'
+  | 'tagged_user'
+  | 'collaborator'
+  | 'title_line'
+  | 'address_line'
+  | 'instagram_location'
+  | 'user_hint';
+
+export type PlaceSearchCandidate = {
+  query: string;
+  reason: string;
   confidence: number;
-  needs_user_confirmation: boolean;
+  parsedPlaceName?: string;
+  parsedAddress?: string;
+  sourceSignal: PlaceSearchSourceSignal;
+};
+
+export type PlaceExtractionResult = {
+  placeName: string | null;
+  areaOrCity: string | null;
+  category: PlaceCategory | null;
+  cuisineOrSpecialty: string | null;
+  recommendedItems: string[];
+  vibeTags: string[];
+  visibleClues: string[];
+  searchQuery: string;
+  searchCandidates: PlaceSearchCandidate[];
+  geoContext: GeoContext;
+  confidence: number;
+  needsUserConfirmation: boolean;
+  missingFields: string[];
 };

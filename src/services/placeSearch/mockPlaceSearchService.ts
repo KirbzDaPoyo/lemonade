@@ -47,8 +47,9 @@ const buildTypedFallback = (query: string): PlaceCandidate => ({
 });
 
 export const mockPlaceSearchService: PlaceSearchService = {
-  async searchPlaces({ query }: PlaceSearchQuery) {
-    const normalizedQuery = normalize(query);
+  async searchPlaces({ query, searchCandidates }: PlaceSearchQuery) {
+    const primaryQuery = searchCandidates?.[0]?.query ?? query;
+    const normalizedQuery = normalize(primaryQuery);
 
     await new Promise((resolve) => {
       setTimeout(resolve, 250);
@@ -67,6 +68,6 @@ export const mockPlaceSearchService: PlaceSearchService = {
       return rankedCandidates.slice(0, 5);
     }
 
-    return normalizedQuery ? [buildTypedFallback(query.trim())] : [];
+    return normalizedQuery ? [buildTypedFallback(primaryQuery.trim())] : [];
   }
 };

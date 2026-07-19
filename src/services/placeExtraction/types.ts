@@ -1,11 +1,16 @@
 import { PlaceExtractionResult } from '../../types/extraction';
+import { InstagramImportResult } from '../../types/instagramImport';
 
 export type PlaceExtractionInput = {
-  source_url: string;
-  caption_text: string;
-  user_notes?: string;
+  sourceUrl: string;
+  sharedText?: string;
+  captionText?: string;
+  userHint?: string;
+  instagramImport?: InstagramImportResult;
 };
 
-export interface PlaceExtractionService {
+export interface PlaceExtractionProvider {
   extractPlace(input: PlaceExtractionInput): Promise<PlaceExtractionResult>;
 }
+
+export type PlaceExtractionService = PlaceExtractionProvider;

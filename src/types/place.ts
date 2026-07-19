@@ -28,6 +28,13 @@ export type PlaceCandidate = {
   primaryType?: string;
   rating?: number;
   userRatingCount?: number;
+  matchedQuery?: string;
+  matchScore?: number;
+  matchedReason?: string;
+  matchedConfidence?: number;
+  matchedParsedPlaceName?: string;
+  matchedParsedAddress?: string;
+  matchedSourceSignal?: string;
 };
 
 export type PlaceCard = {
@@ -53,5 +60,7 @@ export type DraftPlaceEntry = {
   extraction?: PlaceExtractionResult;
   notes?: string;
   captionText?: string;
+  sharedText?: string;
+  userHint?: string;
   screenshotUri?: string;
 };
