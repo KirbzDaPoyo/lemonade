@@ -18,17 +18,52 @@ import { instagramImportProvider } from '../services/instagramImport';
 import { placeExtractionService } from '../services/placeExtraction';
 import { placeSearchService } from '../services/placeSearch';
 import { colors, radii, spacing } from '../theme';
-import { PlaceExtractionResult } from '../types/extraction';
+import { PlaceExtractionResult, PlaceSearchCandidate } from '../types/extraction';
 
 type AddPlaceScreenProps = {
   navigation: AppNavigation;
 };
 
-const isInstagramUrl = (value: string) =>
-  /^https?:\/\/(www\.)?instagram\.com\/(p|reel|reels|tv)\//i.test(value.trim());
+const isInstagramUrl = (value: string) => {
+  try {
+    const url = new URL(value.trim());
+
+    return (
+      url.protocol === 'https:' &&
+      ['instagram.com', 'www.instagram.com'].includes(url.hostname.toLowerCase()) &&
+      (/^\/p\/[^/]+\/?$/i.test(url.pathname) ||
+        /^\/reel\/[^/]+\/?$/i.test(url.pathname) ||
+        /^\/reels\/[^/]+\/?$/i.test(url.pathname))
+    );
+  } catch {
+    return false;
+  }
+};
 
 const getSearchQuery = (extraction: PlaceExtractionResult, manualPlaceName: string) =>
-  extraction.searchCandidates[0]?.query || extraction.searchQuery || manualPlaceName.trim();
+  manualPlaceName.trim() || extraction.searchCandidates[0]?.query || extraction.searchQuery;
+
+const prioritizeManualSearch = (
+  extraction: PlaceExtractionResult,
+  manualPlaceName: string
+): PlaceSearchCandidate[] => {
+  const userHint = manualPlaceName.trim();
+
+  if (!userHint) {
+    return extraction.searchCandidates;
+  }
+
+  return [
+    {
+      query: userHint,
+      reason: 'manual correction',
+      confidence: 1,
+      parsedPlaceName: userHint,
+      sourceSignal: 'user_hint'
+    },
+    ...extraction.searchCandidates.filter((candidate) => candidate.sourceSignal !== 'user_hint')
+  ];
+};
 
 export function AddPlaceScreen({ navigation }: AddPlaceScreenProps) {
   const [sourceInstagramUrl, setSourceInstagramUrl] = useState('');
@@ -47,7 +82,7 @@ export function AddPlaceScreen({ navigation }: AddPlaceScreenProps) {
   ) => {
     const candidates = await placeSearchService.searchPlaces({
       query: searchQuery,
-      searchCandidates: extraction.searchCandidates,
+      searchCandidates: prioritizeManualSearch(extraction, manualPlaceName),
       sourceInstagramUrl: sourceInstagramUrl.trim(),
       areaOrCity: extraction.areaOrCity ?? undefined,
       category: extraction.category ?? undefined,
@@ -80,14 +115,14 @@ export function AddPlaceScreen({ navigation }: AddPlaceScreenProps) {
           {
             query: manualPlaceName.trim(),
             reason: 'manual search',
-            confidence: 0.72,
+            confidence: 1,
             parsedPlaceName: manualPlaceName.trim(),
             sourceSignal: 'user_hint'
           }
         ]
       : [],
     geoContext: getDefaultGeoContext(),
-    confidence: manualPlaceName.trim() ? 0.6 : 0,
+    confidence: manualPlaceName.trim() ? 1 : 0,
     needsUserConfirmation: true,
     missingFields: manualPlaceName.trim() ? [] : ['placeName']
   });
@@ -105,6 +140,7 @@ export function AddPlaceScreen({ navigation }: AddPlaceScreenProps) {
 
     try {
       let extraction: PlaceExtractionResult | undefined;
+      const userHint = manualPlaceName.trim() || undefined;
 
       try {
         const instagramImport = await instagramImportProvider.importUrl({
@@ -113,12 +149,29 @@ export function AddPlaceScreen({ navigation }: AddPlaceScreenProps) {
 
         extraction = await placeExtractionService.extractPlace({
           sourceUrl: sourceInstagramUrl.trim(),
-          instagramImport
+          instagramImport,
+          userHint
         });
-      } catch {
-        extraction = await placeExtractionService.extractPlace({
-          sourceUrl: sourceInstagramUrl.trim()
-        });
+      } catch (error) {
+        const message =
+          error instanceof Error ? error.message : 'Instagram import failed.';
+
+        setNeedsManualQuery(true);
+
+        if (manualPlaceName.trim()) {
+          Alert.alert(
+            'Instagram import failed',
+            `${message} Searching with your place name instead.`
+          );
+          await navigateToCandidates(buildManualExtraction(), manualPlaceName.trim());
+        } else {
+          Alert.alert(
+            'Instagram import failed',
+            `${message} Enter the place name to search manually.`
+          );
+        }
+
+        return;
       }
 
       const searchQuery = getSearchQuery(extraction, manualPlaceName);
@@ -134,17 +187,17 @@ export function AddPlaceScreen({ navigation }: AddPlaceScreenProps) {
 
       await navigateToCandidates(extraction, searchQuery);
     } catch (error) {
-      if (manualPlaceName.trim()) {
-        await navigateToCandidates(buildManualExtraction(), manualPlaceName.trim());
-        return;
-      }
-
       const message =
         error instanceof Error
           ? error.message
           : "I couldn't identify the place from this reel.";
-      setNeedsManualQuery(true);
-      Alert.alert('Add a search hint', `${message} What should we search?`);
+
+      if (manualPlaceName.trim()) {
+        Alert.alert('Place search failed', message);
+      } else {
+        setNeedsManualQuery(true);
+        Alert.alert('Add a search hint', `${message} What should we search?`);
+      }
     } finally {
       setIsFindingPlace(false);
     }

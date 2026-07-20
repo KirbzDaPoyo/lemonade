@@ -156,7 +156,7 @@ const sourceBoost: Record<string, number> = {
   raw_handle: 18,
   address_line: 16,
   title_line: 8,
-  user_hint: 10
+  user_hint: 40
 };
 
 const jsonResponse = (body: unknown, status = 200) =>

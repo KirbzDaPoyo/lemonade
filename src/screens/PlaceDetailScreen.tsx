@@ -34,7 +34,7 @@ export function PlaceDetailScreen({ navigation, placeId }: PlaceDetailScreenProp
 
     try {
       const didUpdate = await updatePlace(place.id, {
-        notes: notesDraft.trim() || undefined
+        notes: notesDraft.trim() || null
       });
 
       if (!didUpdate) {
@@ -55,7 +55,7 @@ export function PlaceDetailScreen({ navigation, placeId }: PlaceDetailScreenProp
     setIsSavingNotes(true);
 
     try {
-      const didUpdate = await updatePlace(place.id, { notes: undefined });
+      const didUpdate = await updatePlace(place.id, { notes: null });
 
       if (!didUpdate) {
         Alert.alert('Notes not cleared', 'The notes could not be cleared.');

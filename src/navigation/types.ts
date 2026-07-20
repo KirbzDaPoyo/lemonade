@@ -12,6 +12,7 @@ export type AppRoute =
 
 export type AppNavigation = {
   navigate: (route: AppRoute) => void;
+  replace: (route: AppRoute) => void;
   goBack: () => void;
   resetToHome: () => void;
 };

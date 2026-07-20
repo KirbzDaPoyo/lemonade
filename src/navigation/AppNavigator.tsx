@@ -12,6 +12,8 @@ export function AppNavigator() {
 
   const navigation: AppNavigation = {
     navigate: (route) => setStack((currentStack) => [...currentStack, route]),
+    replace: (route) =>
+      setStack((currentStack) => [...currentStack.slice(0, -1), route]),
     goBack: () =>
       setStack((currentStack) =>
         currentStack.length > 1 ? currentStack.slice(0, -1) : currentStack

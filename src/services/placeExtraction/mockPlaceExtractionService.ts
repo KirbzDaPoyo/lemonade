@@ -352,13 +352,13 @@ const getLikelyPlaceName = (
   const importData = input.instagramImport;
 
   return (
+    input.userHint ??
     importData?.locationName ??
     signals.pinLines.map((line) => line.parsedPlaceName).find(Boolean) ??
     signals.possibleTitleLine ??
     importData?.taggedUsers.map((user) => cleanUsernameBase(user, true)).find(Boolean) ??
     importData?.collaborators.map((user) => cleanUsernameBase(user, true)).find(Boolean) ??
     signals.rawHandles.map((handle) => cleanUsernameBase(handle, true)).find(Boolean) ??
-    input.userHint ??
     null
   );
 };
@@ -495,7 +495,7 @@ const buildSearchCandidates = (
           createCandidate({
             query: appendGeoSuffix(input.userHint, suffix),
             reason: 'user hint',
-            confidence: 0.72,
+            confidence: 1,
             parsedPlaceName: input.userHint,
             sourceSignal: 'user_hint'
           })
@@ -520,7 +520,13 @@ const buildSearchCandidates = (
     });
   }
 
-  return unique(accepted, (candidate) => candidate.query).slice(0, 12);
+  return unique(accepted, (candidate) => candidate.query)
+    .sort(
+      (left, right) =>
+        Number(right.sourceSignal === 'user_hint') -
+        Number(left.sourceSignal === 'user_hint')
+    )
+    .slice(0, 12);
 };
 
 export const mockPlaceExtractionService: PlaceExtractionService = {

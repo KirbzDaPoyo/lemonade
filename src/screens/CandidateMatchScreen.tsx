@@ -1,3 +1,4 @@
+import { useRef, useState } from 'react';
 import { Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppButton } from '../components/AppButton';
@@ -20,6 +21,35 @@ export function CandidateMatchScreen({
   candidates
 }: CandidateMatchScreenProps) {
   const { addPlace } = usePlaces();
+  const [savingKey, setSavingKey] = useState<string>();
+  const saveInFlightRef = useRef(false);
+
+  const saveOnce = async (
+    saveKey: string,
+    save: () => ReturnType<typeof addPlace>,
+    failureMessage: string
+  ) => {
+    if (saveInFlightRef.current) {
+      return;
+    }
+
+    saveInFlightRef.current = true;
+    setSavingKey(saveKey);
+
+    try {
+      const savedPlace = await save();
+
+      if (savedPlace) {
+        navigation.replace({ name: 'PlaceDetail', placeId: savedPlace.id });
+      } else {
+        Alert.alert('Save failed', failureMessage);
+      }
+    } finally {
+      saveInFlightRef.current = false;
+      setSavingKey(undefined);
+    }
+  };
+
 
 
   const handleSaveCandidate = async (candidate: PlaceCandidate) => {
@@ -37,24 +67,23 @@ export function CandidateMatchScreen({
       ]
     });
 
-    const savedPlace = await addPlace({
-      placeName: candidate.name,
-      address: candidate.address,
-      areaCity: candidate.areaCity,
-      category: candidate.category,
-      cuisineOrSpecialty,
-      tags: mergedTags,
-      sourceInstagramUrl: draft.sourceInstagramUrl,
-      mapUrl: candidate.mapUrl,
-      placeId: candidate.providerPlaceId,
-      status: 'want_to_go'
-    });
-
-    if (savedPlace) {
-      navigation.navigate({ name: 'PlaceDetail', placeId: savedPlace.id });
-    } else {
-      Alert.alert('Save failed', 'The place could not be saved. Check the storage error.');
-    }
+    await saveOnce(
+      candidate.providerPlaceId,
+      () =>
+        addPlace({
+          placeName: candidate.name,
+          address: candidate.address,
+          areaCity: candidate.areaCity,
+          category: candidate.category,
+          cuisineOrSpecialty,
+          tags: mergedTags,
+          sourceInstagramUrl: draft.sourceInstagramUrl,
+          mapUrl: candidate.mapUrl,
+          placeId: candidate.providerPlaceId,
+          status: 'want_to_go'
+        }),
+      'The place could not be saved. Check the storage error.'
+    );
   };
 
   const handleSaveManually = async () => {
@@ -69,22 +98,21 @@ export function CandidateMatchScreen({
       ]
     });
 
-    const savedPlace = await addPlace({
-      placeName: extraction?.placeName || draft.suggestedPlaceName,
-      address: 'Address to confirm',
-      areaCity: extraction?.areaOrCity || 'Area to confirm',
-      category: extraction?.category || 'other',
-      cuisineOrSpecialty: extraction?.cuisineOrSpecialty || undefined,
-      tags: manualTags,
-      sourceInstagramUrl: draft.sourceInstagramUrl,
-      status: 'want_to_go'
-    });
-
-    if (savedPlace) {
-      navigation.navigate({ name: 'PlaceDetail', placeId: savedPlace.id });
-    } else {
-      Alert.alert('Save failed', 'The manual place could not be saved.');
-    }
+    await saveOnce(
+      'manual',
+      () =>
+        addPlace({
+          placeName: extraction?.placeName || draft.suggestedPlaceName,
+          address: 'Address to confirm',
+          areaCity: extraction?.areaOrCity || 'Area to confirm',
+          category: extraction?.category || 'other',
+          cuisineOrSpecialty: extraction?.cuisineOrSpecialty || undefined,
+          tags: manualTags,
+          sourceInstagramUrl: draft.sourceInstagramUrl,
+          status: 'want_to_go'
+        }),
+      'The manual place could not be saved.'
+    );
   };
 
   return (
@@ -115,7 +143,12 @@ export function CandidateMatchScreen({
         ) : null}
       </View>
 
-      <AppButton label="Save Manually" onPress={handleSaveManually} variant="secondary" />
+      <AppButton
+        disabled={Boolean(savingKey)}
+        label={savingKey === 'manual' ? 'Saving...' : 'Save Manually'}
+        onPress={handleSaveManually}
+        variant="secondary"
+      />
 
       <FlatList
         contentContainerStyle={styles.listContent}
@@ -128,7 +161,12 @@ export function CandidateMatchScreen({
           </View>
         }
         renderItem={({ item }) => (
-          <CandidateRow candidate={item} onPress={() => handleSaveCandidate(item)} />
+          <CandidateRow
+            candidate={item}
+            disabled={Boolean(savingKey)}
+            isSaving={savingKey === item.providerPlaceId}
+            onPress={() => handleSaveCandidate(item)}
+          />
         )}
       />
     </View>
@@ -137,16 +175,26 @@ export function CandidateMatchScreen({
 
 function CandidateRow({
   candidate,
+  disabled,
+  isSaving,
   onPress
 }: {
   candidate: PlaceCandidate;
+  disabled: boolean;
+  isSaving: boolean;
   onPress: () => void;
 }) {
   return (
     <Pressable
       accessibilityRole="button"
+      accessibilityState={{ disabled }}
+      disabled={disabled}
       onPress={onPress}
-      style={({ pressed }) => [styles.candidateCard, pressed && styles.pressed]}
+      style={({ pressed }) => [
+        styles.candidateCard,
+        pressed && styles.pressed,
+        disabled && styles.disabled
+      ]}
     >
       <View style={styles.candidateHeader}>
         <View style={styles.candidateText}>
@@ -155,7 +203,7 @@ function CandidateRow({
             {categoryLabels[candidate.category]} - {candidate.areaCity}
           </Text>
         </View>
-        <Text style={styles.selectText}>Select</Text>
+        <Text style={styles.selectText}>{isSaving ? 'Saving...' : 'Select'}</Text>
       </View>
       <Text style={styles.address}>{candidate.address}</Text>
       {candidate.cuisineOrSpecialty ? (
@@ -238,6 +286,9 @@ const styles = StyleSheet.create({
   },
   pressed: {
     opacity: 0.82
+  },
+  disabled: {
+    opacity: 0.55
   },
   candidateHeader: {
     alignItems: 'flex-start',

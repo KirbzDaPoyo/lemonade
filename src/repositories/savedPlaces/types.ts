@@ -1,7 +1,17 @@
 import { PlaceCard } from '../../types/place';
 
 export type PlaceInput = Omit<PlaceCard, 'id' | 'createdAt' | 'updatedAt'>;
-export type PlaceUpdate = Partial<Omit<PlaceCard, 'id' | 'createdAt' | 'updatedAt'>>;
+type MutablePlace = Omit<PlaceCard, 'id' | 'createdAt' | 'updatedAt'>;
+type ClearablePlaceField = 'cuisineOrSpecialty' | 'notes' | 'mapUrl' | 'placeId';
+
+export type PlaceUpdate = Partial<
+  Omit<MutablePlace, ClearablePlaceField> & {
+    cuisineOrSpecialty: string | null;
+    notes: string | null;
+    mapUrl: string | null;
+    placeId: string | null;
+  }
+>;
 
 export type SavedPlacesRepositoryKind = 'local' | 'supabase';
 

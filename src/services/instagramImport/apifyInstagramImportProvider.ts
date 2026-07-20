@@ -1,3 +1,5 @@
+import { FunctionsHttpError } from '@supabase/supabase-js';
+
 import { createSupabaseClient } from '../../lib/supabaseClient';
 import { InstagramImportResult } from '../../types/instagramImport';
 import { InstagramImportInput, InstagramImportProvider } from './types';
@@ -8,6 +10,18 @@ type InstagramImportFunctionResponse = {
     code?: string;
     message?: string;
   };
+};
+
+const getImportErrorMessage = async (error: unknown) => {
+  if (error instanceof FunctionsHttpError) {
+    const response = (await error.context
+      .json()
+      .catch(() => undefined)) as InstagramImportFunctionResponse | undefined;
+
+    return response?.error?.message || error.message;
+  }
+
+  return error instanceof Error ? error.message : 'Instagram import failed.';
 };
 
 const logSanitizedImport = (result: InstagramImportResult) => {
@@ -44,7 +58,7 @@ export const apifyInstagramImportProvider: InstagramImportProvider = {
     );
 
     if (error) {
-      throw new Error(error.message || 'Instagram import failed.');
+      throw new Error(await getImportErrorMessage(error));
     }
 
     if (data?.error) {

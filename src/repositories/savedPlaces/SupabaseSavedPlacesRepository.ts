@@ -2,6 +2,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 
 import { SavedPlaceRow } from '../../lib/supabaseClient';
 import { PlaceCard } from '../../types/place';
+import { normalizeInstagramSourceUrl } from './placeIdentity';
 import { PlaceUpdate, SavedPlacesRepository } from './types';
 
 type SavedPlacesSupabaseClient = SupabaseClient;
@@ -32,7 +33,7 @@ const mapPlaceToRow = (place: PlaceCard): SavedPlaceRow => ({
   cuisine_or_specialty: place.cuisineOrSpecialty ?? null,
   tags: place.tags,
   notes: place.notes ?? null,
-  source_url: place.sourceInstagramUrl,
+  source_url: normalizeInstagramSourceUrl(place.sourceInstagramUrl),
   place_id: place.placeId ?? null,
   map_url: place.mapUrl ?? null,
   status: place.status,
@@ -51,7 +52,7 @@ const mapPlaceUpdateToRow = (updates: PlaceUpdate): Partial<SavedPlaceRow> => ({
   ...(updates.tags !== undefined ? { tags: updates.tags } : {}),
   ...(updates.notes !== undefined ? { notes: updates.notes ?? null } : {}),
   ...(updates.sourceInstagramUrl !== undefined
-    ? { source_url: updates.sourceInstagramUrl }
+    ? { source_url: normalizeInstagramSourceUrl(updates.sourceInstagramUrl) }
     : {}),
   ...(updates.placeId !== undefined ? { place_id: updates.placeId ?? null } : {}),
   ...(updates.mapUrl !== undefined ? { map_url: updates.mapUrl ?? null } : {}),
@@ -67,6 +68,39 @@ export class SupabaseSavedPlacesRepository implements SavedPlacesRepository {
 
   constructor(private readonly supabase: SavedPlacesSupabaseClient) {}
 
+  private async findExistingPlace(place: PlaceCard) {
+    if (place.placeId) {
+      const { data, error } = await this.supabase
+        .from('saved_places')
+        .select('*')
+        .eq('place_id', place.placeId)
+        .limit(1)
+        .maybeSingle();
+
+      if (error) {
+        throw toSupabaseError('duplicate check', error.message);
+      }
+
+      if (data) {
+        return mapRowToPlace(data);
+      }
+    }
+
+    const normalizedSourceUrl = normalizeInstagramSourceUrl(place.sourceInstagramUrl);
+    const { data, error } = await this.supabase
+      .from('saved_places')
+      .select('*')
+      .eq('source_url', normalizedSourceUrl)
+      .limit(1)
+      .maybeSingle();
+
+    if (error) {
+      throw toSupabaseError('duplicate check', error.message);
+    }
+
+    return data ? mapRowToPlace(data) : undefined;
+  }
+
   async listPlaces() {
     const { data, error } = await this.supabase
       .from('saved_places')
@@ -81,13 +115,31 @@ export class SupabaseSavedPlacesRepository implements SavedPlacesRepository {
   }
 
   async createPlace(place: PlaceCard) {
+    const normalizedPlace = {
+      ...place,
+      sourceInstagramUrl: normalizeInstagramSourceUrl(place.sourceInstagramUrl)
+    };
+    const existingPlace = await this.findExistingPlace(normalizedPlace);
+
+    if (existingPlace) {
+      return existingPlace;
+    }
+
     const { data, error } = await this.supabase
       .from('saved_places')
-      .insert(mapPlaceToRow(place))
+      .insert(mapPlaceToRow(normalizedPlace))
       .select()
       .single();
 
     if (error) {
+      if (error.code === '23505') {
+        const duplicatePlace = await this.findExistingPlace(normalizedPlace);
+
+        if (duplicatePlace) {
+          return duplicatePlace;
+        }
+      }
+
       throw toSupabaseError('create', error.message);
     }
 
@@ -97,7 +149,6 @@ export class SupabaseSavedPlacesRepository implements SavedPlacesRepository {
 
     return mapRowToPlace(data);
   }
-
   async updatePlace(id: string, updates: PlaceUpdate) {
     const { data, error } = await this.supabase
       .from('saved_places')
