@@ -17,6 +17,7 @@ import { PlaceCard } from '../types/place';
 type PlacesContextValue = {
   places: PlaceCard[];
   isLoading: boolean;
+  isStorageAvailable: boolean;
   storageError?: string;
   addPlace: (place: PlaceInput) => Promise<PlaceCard | undefined>;
   updatePlace: (id: string, updates: PlaceUpdate) => Promise<boolean>;
@@ -31,15 +32,20 @@ const getErrorMessage = (fallback: string, error: unknown) =>
   error instanceof Error ? error.message : fallback;
 
 export function PlacesProvider({ children }: { children: ReactNode }) {
-  const repository = useMemo(() => createSavedPlacesRepository(), []);
+  const repositoryConfiguration = useMemo(() => createSavedPlacesRepository(), []);
+  const { repository, error: configurationError } = repositoryConfiguration;
   const [places, setPlaces] = useState<PlaceCard[]>([]);
-  const [isLoading, setIsLoading] = useState(true);
-  const [storageError, setStorageError] = useState<string | undefined>();
+  const [isLoading, setIsLoading] = useState(Boolean(repository));
+  const [storageError, setStorageError] = useState<string | undefined>(configurationError);
 
   useEffect(() => {
     let isMounted = true;
 
     const hydratePlaces = async () => {
+      if (!repository) {
+        return;
+      }
+
       try {
         const savedPlaces = await repository.listPlaces();
 
@@ -73,8 +79,14 @@ export function PlacesProvider({ children }: { children: ReactNode }) {
     () => ({
       places,
       isLoading,
+      isStorageAvailable: Boolean(repository),
       storageError,
       addPlace: async (place) => {
+        if (!repository) {
+          setStorageError(configurationError);
+          return undefined;
+        }
+
         const now = new Date().toISOString();
         const savedPlace: PlaceCard = {
           ...place,
@@ -101,6 +113,11 @@ export function PlacesProvider({ children }: { children: ReactNode }) {
         }
       },
       updatePlace: async (id, updates) => {
+        if (!repository) {
+          setStorageError(configurationError);
+          return false;
+        }
+
         try {
           const persistedPlace = await repository.updatePlace(id, updates);
 
@@ -119,6 +136,11 @@ export function PlacesProvider({ children }: { children: ReactNode }) {
         }
       },
       updatePlaceStatus: async (id, status) => {
+        if (!repository) {
+          setStorageError(configurationError);
+          return false;
+        }
+
         try {
           const persistedPlace = await repository.updatePlace(id, { status });
 
@@ -137,6 +159,11 @@ export function PlacesProvider({ children }: { children: ReactNode }) {
         }
       },
       deletePlace: async (id) => {
+        if (!repository) {
+          setStorageError(configurationError);
+          return false;
+        }
+
         try {
           await repository.deletePlace(id);
           setPlaces((currentPlaces) =>
@@ -152,7 +179,7 @@ export function PlacesProvider({ children }: { children: ReactNode }) {
         }
       }
     }),
-    [isLoading, places, repository, storageError]
+    [configurationError, isLoading, places, repository, storageError]
   );
 
   return <PlacesContext.Provider value={value}>{children}</PlacesContext.Provider>;

@@ -109,7 +109,9 @@ const weakQueryTerms = new Set([
   'shui',
   'po',
   'san',
-  'kong'
+  'kong',
+  '\u9999\u6e2f',
+  '\u65b0\u52a0\u5761'
 ]);
 
 const noisyUsernameSuffixes = ['hongkong', 'official', 'restaurant'];
@@ -131,6 +133,25 @@ const knownHandleWords = [
 
 const normalize = (value: string) => value.trim().replace(/\s+/g, ' ');
 const lower = (value: string) => normalize(value).toLowerCase();
+const escapeRegex = (value: string) => value.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
+const containsKeyword = (text: string, keyword: string) => {
+  const phrase = lower(keyword)
+    .split(/\s+/)
+    .map(escapeRegex)
+    .join('\\s+');
+
+  return new RegExp(
+    `(?:^|[^\\p{L}\\p{M}\\p{N}])${phrase}(?=$|[^\\p{L}\\p{M}\\p{N}])`,
+    'u'
+  ).test(lower(text));
+};
+const isMeaningfulQueryToken = (token: string) =>
+  Array.from(token).length > 2 || /[^\u0000-\u007f]/u.test(token);
+const queryTokens = (value: string) =>
+  lower(value)
+    .replace(/[^\p{L}\p{M}\p{N}\s]/gu, ' ')
+    .split(/\s+/)
+    .filter((token) => token && isMeaningfulQueryToken(token));
 const compact = (values: Array<string | null | undefined>) =>
   values.map((value) => value?.trim()).filter((value): value is string => Boolean(value));
 const unique = <T>(values: T[], key: (value: T) => string) => {
@@ -190,11 +211,11 @@ const getDistrictHints = (text: string) =>
   districtHints.filter((district) => lower(text).includes(district.toLowerCase()));
 
 const getCategoryHints = (text: string) =>
-  categoryKeywords.filter((keyword) => lower(text).includes(keyword));
+  categoryKeywords.filter((keyword) => containsKeyword(text, keyword));
 
 const getCategory = (text: string): PlaceCategory | null =>
   categorySignals.find((signal) =>
-    signal.keywords.some((keyword) => lower(text).includes(keyword))
+    signal.keywords.some((keyword) => containsKeyword(text, keyword))
   )?.category ?? null;
 
 const isLikelyTitleLine = (line: string) => {
@@ -214,12 +235,12 @@ const isLikelyTitleLine = (line: string) => {
 
 const removePinMarker = (line: string) =>
   line
-    .replace(/^\s*(?:\uD83D\uDCCD|\uD83E\uDDED|\?{1,4})\s*/, '')
+    .replace(/^\s*(?:\uD83D\uDCCD|\uD83E\uDDED)\s*/, '')
     .replace(/^\s*(?:location|address|where)\s*[:\-]\s*/i, '')
     .trim();
 
 const isPinLine = (line: string) =>
-  /^\s*(?:\uD83D\uDCCD|\uD83E\uDDED|\?{1,4}|location\s*:|address\s*:|where\s*:)/i.test(line);
+  /^\s*(?:\uD83D\uDCCD|\uD83E\uDDED|(?:location|address|where)\s*[:\-])/i.test(line);
 
 const parsePinLine = (line: string): ParsedPinLine => {
   const text = removePinMarker(line);
@@ -336,10 +357,7 @@ const isWeakQuery = (candidate: PlaceSearchCandidate) => {
     return true;
   }
 
-  const tokens = lower(candidate.query)
-    .replace(/[^a-z0-9\s]/g, ' ')
-    .split(/\s+/)
-    .filter(Boolean);
+  const tokens = queryTokens(candidate.query);
   const distinctMeaningful = tokens.filter((token) => !weakQueryTerms.has(token));
 
   return distinctMeaningful.length === 0;
@@ -444,6 +462,21 @@ const buildSearchCandidates = (
 ) => {
   const importData = input.instagramImport;
   const candidates: PlaceSearchCandidate[] = [
+    ...(importData?.locationName && importData.locationAddress
+      ? [
+          createCandidate({
+            query: appendGeoSuffix(
+              `${importData.locationName} ${importData.locationAddress}`,
+              suffix
+            ),
+            reason: 'Instagram location name + address',
+            confidence: 0.99,
+            parsedPlaceName: importData.locationName,
+            parsedAddress: importData.locationAddress,
+            sourceSignal: 'instagram_location'
+          })
+        ]
+      : []),
     ...(importData?.locationName
       ? [
           createCandidate({
@@ -451,6 +484,17 @@ const buildSearchCandidates = (
             reason: 'Instagram location name',
             confidence: 0.98,
             parsedPlaceName: importData.locationName,
+            sourceSignal: 'instagram_location'
+          })
+        ]
+      : []),
+    ...(!importData?.locationName && importData?.locationAddress
+      ? [
+          createCandidate({
+            query: appendGeoSuffix(importData.locationAddress, suffix),
+            reason: 'Instagram location address',
+            confidence: 0.86,
+            parsedAddress: importData.locationAddress,
             sourceSignal: 'instagram_location'
           })
         ]
@@ -529,6 +573,54 @@ const buildSearchCandidates = (
     .slice(0, 12);
 };
 
+const sourceReliabilityBonus: Record<PlaceSearchSourceSignal, number> = {
+  user_hint: 0.18,
+  instagram_location: 0.16,
+  pin_line: 0.1,
+  address_line: 0.08,
+  tagged_user: 0.04,
+  collaborator: 0.03,
+  raw_handle: 0,
+  title_line: 0
+};
+
+const normalizeEvidence = (value: string) =>
+  lower(stripHandle(value)).replace(/[^\p{L}\p{M}\p{N}]/gu, '');
+
+const countCorroboratingNameEvidence = (
+  placeName: string | null,
+  input: PlaceExtractionInput,
+  signals: CaptionSignals
+) => {
+  if (!placeName) {
+    return 0;
+  }
+
+  const importData = input.instagramImport;
+  const target = normalizeEvidence(placeName);
+  const evidence = compact([
+    input.userHint,
+    importData?.locationName,
+    signals.possibleTitleLine,
+    ...signals.pinLines.map((line) => line.parsedPlaceName),
+    ...(importData?.taggedUsers ?? []),
+    ...(importData?.collaborators ?? []),
+    ...signals.rawHandles
+  ]);
+
+  return new Set(
+    evidence
+      .map(normalizeEvidence)
+      .filter(
+        (value) =>
+          value &&
+          (value === target ||
+            value.includes(target) ||
+            target.includes(value))
+      )
+  ).size;
+};
+
 export const mockPlaceExtractionService: PlaceExtractionService = {
   async extractPlace(input: PlaceExtractionInput): Promise<PlaceExtractionResult> {
     const importData = input.instagramImport;
@@ -558,15 +650,31 @@ export const mockPlaceExtractionService: PlaceExtractionService = {
       .slice(0, 5);
     const cuisineOrSpecialty = specialties.join(', ') || null;
     const searchCandidates = buildSearchCandidates(input, signals, geoContext.searchSuffix);
-    const confidence = Math.min(
-      0.12 +
-        (searchCandidates[0]?.confidence ?? 0) * 0.55 +
-        (placeName ? 0.18 : 0) +
-        (signals.pinLines.length ? 0.12 : 0) +
-        (signals.rawHandles.length ? 0.08 : 0),
-      0.97
+    const primaryCandidate = searchCandidates[0];
+    const corroboratingNameEvidence =
+      countCorroboratingNameEvidence(placeName, input, signals);
+    const hasAddressEvidence = Boolean(
+      importData?.locationAddress ||
+        signals.pinLines.some((line) => line.parsedAddress) ||
+        signals.addressLikeLines.length
     );
-    const missingFields = searchCandidates.length ? [] : ['placeName'];
+    const hasAreaEvidence = Boolean(importData?.locationCity || signals.districtHints.length);
+    const confidence = Math.min(
+      0.08 +
+        (primaryCandidate?.confidence ?? 0) * 0.45 +
+        (primaryCandidate ? sourceReliabilityBonus[primaryCandidate.sourceSignal] : 0) +
+        Math.min(Math.max(0, corroboratingNameEvidence - 1) * 0.06, 0.12) +
+        (hasAddressEvidence ? 0.08 : 0) +
+        (category ? 0.04 : 0),
+      0.95
+    );
+    const missingFields = [
+      !placeName ? 'placeName' : undefined,
+      !hasAddressEvidence ? 'address' : undefined,
+      !hasAreaEvidence ? 'areaOrCity' : undefined,
+      !category ? 'category' : undefined,
+      !cuisineOrSpecialty ? 'cuisineOrSpecialty' : undefined
+    ].filter((field): field is string => Boolean(field));
 
     return {
       placeName,
@@ -594,7 +702,11 @@ export const mockPlaceExtractionService: PlaceExtractionService = {
       searchCandidates,
       geoContext,
       confidence,
-      needsUserConfirmation: confidence < 0.55 || !searchCandidates.length,
+      needsUserConfirmation:
+        confidence < 0.65 ||
+        !searchCandidates.length ||
+        missingFields.includes('placeName') ||
+        missingFields.includes('address'),
       missingFields
     };
   }

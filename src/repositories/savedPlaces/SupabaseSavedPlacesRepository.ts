@@ -64,8 +64,6 @@ const toSupabaseError = (action: string, message?: string) =>
   new Error(`Supabase saved places ${action} failed${message ? `: ${message}` : '.'}`);
 
 export class SupabaseSavedPlacesRepository implements SavedPlacesRepository {
-  readonly kind = 'supabase';
-
   constructor(private readonly supabase: SavedPlacesSupabaseClient) {}
 
   private async findExistingPlace(place: PlaceCard) {

@@ -13,10 +13,7 @@ export type PlaceUpdate = Partial<
   }
 >;
 
-export type SavedPlacesRepositoryKind = 'local' | 'supabase';
-
 export interface SavedPlacesRepository {
-  kind: SavedPlacesRepositoryKind;
   listPlaces(): Promise<PlaceCard[]>;
   createPlace(place: PlaceCard): Promise<PlaceCard>;
   updatePlace(id: string, updates: PlaceUpdate): Promise<PlaceCard>;

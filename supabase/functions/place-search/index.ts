@@ -145,7 +145,9 @@ const weakTerms = new Set([
   'sham',
   'shui',
   'po',
-  'san'
+  'san',
+  '\u9999\u6e2f',
+  '\u65b0\u52a0\u5761'
 ]);
 
 const sourceBoost: Record<string, number> = {
@@ -188,12 +190,14 @@ const hasSuffix = (query: string, suffix: string) => lower(query).includes(lower
 const withGeoSuffix = (query: string, geoContext: GeoContext) =>
   hasSuffix(query, geoContext.searchSuffix) ? normalize(query) : `${normalize(query)} ${geoContext.searchSuffix}`;
 
+const isMeaningfulQueryToken = (token: string) =>
+  Array.from(token).length > 2 || /[^\u0000-\u007f]/u.test(token);
 const queryTokens = (value: string) =>
   lower(value)
     .replace(/hong kong|singapore/g, ' ')
-    .replace(/[^a-z0-9\s]/g, ' ')
+    .replace(/[^\p{L}\p{M}\p{N}\s]/gu, ' ')
     .split(/\s+/)
-    .filter((token) => token.length > 2);
+    .filter((token) => token && isMeaningfulQueryToken(token));
 
 const hasStrongIdentifier = (candidate: SearchCandidateInput) =>
   Boolean(candidate.parsedPlaceName || candidate.parsedAddress) ||

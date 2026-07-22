@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { Alert, Linking, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { AppButton } from '../components/AppButton';
@@ -16,11 +16,30 @@ type PlaceDetailScreenProps = {
 
 const statusOptions: PlaceStatus[] = ['want_to_go', 'visited', 'favorite', 'skip'];
 
+const openExternalUrl = async (url: string, destination: string) => {
+  try {
+    const isSupported = await Linking.canOpenURL(url);
+
+    if (!isSupported) {
+      throw new Error('Unsupported URL');
+    }
+
+    await Linking.openURL(url);
+  } catch {
+    Alert.alert(
+      `${destination} unavailable`,
+      'This link could not be opened on this device.'
+    );
+  }
+};
+
 export function PlaceDetailScreen({ navigation, placeId }: PlaceDetailScreenProps) {
   const { deletePlace, places, storageError, updatePlace, updatePlaceStatus } = usePlaces();
   const place = places.find((savedPlace) => savedPlace.id === placeId);
   const [notesDraft, setNotesDraft] = useState('');
   const [isSavingNotes, setIsSavingNotes] = useState(false);
+  const [pendingStatus, setPendingStatus] = useState<PlaceStatus | null>(null);
+  const statusUpdateInFlight = useRef(false);
   useEffect(() => {
     setNotesDraft(place?.notes ?? '');
   }, [place?.id, place?.notes]);
@@ -65,6 +84,34 @@ export function PlaceDetailScreen({ navigation, placeId }: PlaceDetailScreenProp
     }
   };
 
+  const handleStatusChange = async (status: PlaceStatus) => {
+    if (!place || place.status === status || statusUpdateInFlight.current) {
+      return;
+    }
+
+    statusUpdateInFlight.current = true;
+    setPendingStatus(status);
+
+    try {
+      const didUpdate = await updatePlaceStatus(place.id, status);
+
+      if (!didUpdate) {
+        Alert.alert(
+          'Status not updated',
+          `The status could not be changed to ${statusLabels[status]}.`
+        );
+      }
+    } catch {
+      Alert.alert(
+        'Status not updated',
+        `The status could not be changed to ${statusLabels[status]}.`
+      );
+    } finally {
+      statusUpdateInFlight.current = false;
+      setPendingStatus(null);
+    }
+  };
+
   const handleDelete = () => {
     if (!place) {
       return;
@@ -97,6 +144,8 @@ export function PlaceDetailScreen({ navigation, placeId }: PlaceDetailScreenProp
     );
   }
 
+  const mapUrl = place.mapUrl;
+
   return (
     <ScrollView contentContainerStyle={styles.content} style={styles.screen}>
       <View style={styles.header}>
@@ -121,9 +170,10 @@ export function PlaceDetailScreen({ navigation, placeId }: PlaceDetailScreenProp
         <View style={styles.statusGrid}>
           {statusOptions.map((status) => (
             <AppButton
+              disabled={pendingStatus !== null}
               key={status}
-              label={statusLabels[status]}
-              onPress={() => updatePlaceStatus(place.id, status)}
+              label={pendingStatus === status ? 'Updating...' : statusLabels[status]}
+              onPress={() => handleStatusChange(status)}
               variant={place.status === status ? 'primary' : 'secondary'}
               style={styles.statusButton}
             />
@@ -181,14 +231,14 @@ export function PlaceDetailScreen({ navigation, placeId }: PlaceDetailScreenProp
         <View style={styles.actionRow}>
           <AppButton
             label="Open Instagram"
-            onPress={() => Linking.openURL(place.sourceInstagramUrl)}
+            onPress={() => void openExternalUrl(place.sourceInstagramUrl, 'Instagram')}
             variant="secondary"
             style={styles.flexButton}
           />
-          {place.mapUrl ? (
+          {mapUrl ? (
             <AppButton
               label="Open Map"
-              onPress={() => Linking.openURL(place.mapUrl || '')}
+              onPress={() => void openExternalUrl(mapUrl, 'Map')}
               variant="secondary"
               style={styles.flexButton}
             />

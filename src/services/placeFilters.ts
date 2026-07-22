@@ -97,7 +97,7 @@ const baseFilterDefinitions: PlaceFilterOption[] = [
   {
     key: 'other',
     label: categoryLabels.other,
-    matchesPlace: (place) => hasCategory(place, 'other') && place.tags.length === 0
+    matchesPlace: (place) => hasCategory(place, 'other')
   }
 ];
 

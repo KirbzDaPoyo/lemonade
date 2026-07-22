@@ -1,4 +1,4 @@
-import { PlaceCandidate, PlaceCard } from '../types/place';
+import { PlaceCandidate } from '../types/place';
 
 export const mockPlaceCandidates: PlaceCandidate[] = [
   {
@@ -55,24 +55,5 @@ export const mockPlaceCandidates: PlaceCandidate[] = [
     cuisineOrSpecialty: 'snacks and local vendors',
     tags: ['market', 'street-food', 'shopping'],
     mapUrl: 'https://maps.google.com/?q=Canal+Night+Market+Bangkok'
-  }
-];
-
-export const initialSavedPlaces: PlaceCard[] = [
-  {
-    id: 'seed-1',
-    placeName: 'Lemon House Cafe',
-    address: '12 Garden Lane, Old Town',
-    areaCity: 'Bangkok',
-    category: 'cafe',
-    cuisineOrSpecialty: 'espresso, lemon tart',
-    tags: ['coffee', 'brunch', 'quiet'],
-    notes: 'Saw the corner table in a reel. Looks good for a weekday morning.',
-    sourceInstagramUrl: 'https://www.instagram.com/reel/mock-lemon-house/',
-    mapUrl: 'https://maps.google.com/?q=Lemon+House+Cafe+Bangkok',
-    placeId: 'mock-lemon-house-cafe',
-    status: 'want_to_go',
-    createdAt: '2026-07-01T00:00:00.000Z',
-    updatedAt: '2026-07-01T00:00:00.000Z'
   }
 ];

@@ -1,20 +1,23 @@
-import { backendConfig } from '../../config/backend';
-import { initialSavedPlaces } from '../../data/mockPlaces';
 import { createSupabaseClient } from '../../lib/supabaseClient';
-import { LocalSavedPlacesRepository } from './LocalSavedPlacesRepository';
 import { SupabaseSavedPlacesRepository } from './SupabaseSavedPlacesRepository';
 import { SavedPlacesRepository } from './types';
 
 export type { PlaceInput, PlaceUpdate, SavedPlacesRepository } from './types';
 
-export const createSavedPlacesRepository = (): SavedPlacesRepository => {
-  if (backendConfig.savedPlacesBackend === 'supabase') {
-    const supabase = createSupabaseClient();
+export type SavedPlacesRepositoryConfiguration = {
+  repository?: SavedPlacesRepository;
+  error?: string;
+};
 
-    if (supabase) {
-      return new SupabaseSavedPlacesRepository(supabase);
-    }
+export const createSavedPlacesRepository = (): SavedPlacesRepositoryConfiguration => {
+  const supabase = createSupabaseClient();
+
+  if (!supabase) {
+    return {
+      error:
+        'Cloud storage is not configured. Add the Supabase URL and publishable key, then restart the app.'
+    };
   }
 
-  return new LocalSavedPlacesRepository(initialSavedPlaces);
+  return { repository: new SupabaseSavedPlacesRepository(supabase) };
 };

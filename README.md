@@ -13,8 +13,8 @@ The MVP is intentionally based on user-initiated sharing or pasting. It stores t
 - Optional Instagram metadata import through Apify, called only from a Supabase Edge Function
 - Candidate confirmation flow
 - Place Detail screen with source URL, map URL, tags, editable notes, and status updates
-- Local persistence for saved places using Expo-compatible AsyncStorage
-- Optional Supabase-backed saved places repository with local fallback
+- Supabase-backed cloud persistence for saved places
+- Visible configuration errors when cloud storage is unavailable
 - TypeScript domain models and service interfaces designed for a future Google Places or Supabase integration
 
 ## Setup
@@ -25,28 +25,17 @@ Install dependencies:
 npm install
 ```
 
-This includes `@react-native-async-storage/async-storage` for local saved-place persistence, `@supabase/supabase-js` for the optional backend repository, and `react-native-url-polyfill` for React Native Supabase compatibility.
+This includes `@react-native-async-storage/async-storage` for Supabase authentication sessions, `@supabase/supabase-js` for cloud persistence, and `react-native-url-polyfill` for React Native Supabase compatibility.
 
-Create a local env file when you want to test Supabase:
+Create a local env file and configure Supabase:
 
 ```bash
 copy .env.example .env
 ```
 
-Local storage is the default when Supabase values are missing:
+Saved places require these Supabase settings:
 
 ```text
-EXPO_PUBLIC_SAVED_PLACES_BACKEND=local
-EXPO_PUBLIC_PLACE_SEARCH_PROVIDER=mock
-EXPO_PUBLIC_INSTAGRAM_IMPORT_PROVIDER=apify
-```
-
-To use Supabase, set:
-
-```text
-EXPO_PUBLIC_SAVED_PLACES_BACKEND=supabase
-EXPO_PUBLIC_PLACE_SEARCH_PROVIDER=google
-EXPO_PUBLIC_INSTAGRAM_IMPORT_PROVIDER=apify
 EXPO_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co
 EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-public-key
 ```
@@ -74,13 +63,12 @@ npm run ios
 ```text
 src/
   components/              Shared UI building blocks
-  data/                    Mock candidates and seed saved places
+  data/                    Mock place-search candidates
   navigation/              Lightweight MVP navigation types and router
-  repositories/savedPlaces/ Local and Supabase saved-place data access
+  repositories/savedPlaces/ Supabase saved-place data access
   screens/                 Home, Add Place, Candidate Match, Place Detail
   services/placeExtraction/ AI-ready extraction interface and mock implementation
   services/placeSearch/    Provider interface and mock implementation
-  storage/                 Local persistence adapter for saved places
   store/                   In-memory saved places state
   types/                   Domain types for place cards and filters
   utils/                   Display labels and formatting helpers
@@ -105,7 +93,7 @@ notes, source_url, place_id, map_url, status, created_at, updated_at
 
 The included row-level security policies allow anonymous CRUD access so the no-auth MVP can work from Expo Go. This is for development only. Before production, add authentication, add a `user_id` column, and replace the permissive policies with user-scoped policies.
 
-If Supabase environment variables are missing, the app automatically uses the local repository. If variables are present and `EXPO_PUBLIC_SAVED_PLACES_BACKEND` is not `local`, saved places are read and written through Supabase.
+If the Supabase URL or publishable key is missing, the app shows a cloud-configuration error and disables adding places. It never redirects saved-place operations to device-only storage.
 
 ## Google Places Search
 

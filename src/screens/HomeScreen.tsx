@@ -1,4 +1,4 @@
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native';
 
 import { AppButton } from '../components/AppButton';
@@ -15,23 +15,34 @@ type HomeScreenProps = {
 };
 
 export function HomeScreen({ navigation }: HomeScreenProps) {
-  const { isLoading, places, storageError } = usePlaces();
+  const { isLoading, isStorageAvailable, places, storageError } = usePlaces();
   const [selectedStatus, setSelectedStatus] = useState<PlaceStatus | 'all'>('all');
   const [selectedPlaceFilter, setSelectedPlaceFilter] = useState<PlaceFilterKey>('all');
 
   const placeFilterOptions = useMemo(() => getPlaceFilterOptions(places), [places]);
+  const activePlaceFilter = placeFilterOptions.some(
+    (option) => option.key === selectedPlaceFilter
+  )
+    ? selectedPlaceFilter
+    : 'all';
+
+  useEffect(() => {
+    if (activePlaceFilter !== selectedPlaceFilter) {
+      setSelectedPlaceFilter(activePlaceFilter);
+    }
+  }, [activePlaceFilter, selectedPlaceFilter]);
 
   const filteredPlaces = useMemo(
     () =>
       places.filter((place) => {
         const matchesStatus =
           selectedStatus === 'all' || place.status === selectedStatus;
-        const placeFilter = findPlaceFilterOption(placeFilterOptions, selectedPlaceFilter);
+        const placeFilter = findPlaceFilterOption(placeFilterOptions, activePlaceFilter);
         const matchesPlaceFilter = placeFilter.matchesPlace(place);
 
         return matchesStatus && matchesPlaceFilter;
       }),
-    [placeFilterOptions, places, selectedPlaceFilter, selectedStatus]
+    [activePlaceFilter, placeFilterOptions, places, selectedStatus]
   );
 
   return (
@@ -42,6 +53,7 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
           <Text style={styles.title}>Places</Text>
         </View>
         <AppButton
+          disabled={!isStorageAvailable}
           label="Add"
           onPress={() => navigation.navigate({ name: 'AddPlace' })}
           style={styles.addButton}
@@ -50,7 +62,7 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
 
       <FilterBar
         selectedStatus={selectedStatus}
-        selectedPlaceFilter={selectedPlaceFilter}
+        selectedPlaceFilter={activePlaceFilter}
         placeFilterOptions={placeFilterOptions}
         onStatusChange={setSelectedStatus}
         onPlaceFilterChange={setSelectedPlaceFilter}
