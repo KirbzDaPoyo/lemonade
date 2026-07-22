@@ -3,9 +3,7 @@ import type { SupabaseClient } from '@supabase/supabase-js';
 import { SavedPlaceRow } from '../../lib/supabaseClient';
 import { PlaceCard } from '../../types/place';
 import { normalizeInstagramSourceUrl } from './placeIdentity';
-import { PlaceUpdate, SavedPlacesRepository } from './types';
-
-type SavedPlacesSupabaseClient = SupabaseClient;
+import { NewPlace, PlaceUpdate, SavedPlacesRepository } from './types';
 
 const mapRowToPlace = (row: SavedPlaceRow): PlaceCard => ({
   id: row.id,
@@ -24,7 +22,9 @@ const mapRowToPlace = (row: SavedPlaceRow): PlaceCard => ({
   updatedAt: row.updated_at
 });
 
-const mapPlaceToRow = (place: PlaceCard): SavedPlaceRow => ({
+type SavedPlaceInsert = Omit<SavedPlaceRow, 'created_at' | 'updated_at'>;
+
+const mapPlaceToRow = (place: NewPlace): SavedPlaceInsert => ({
   id: place.id,
   name: place.placeName,
   address: place.address,
@@ -36,9 +36,7 @@ const mapPlaceToRow = (place: PlaceCard): SavedPlaceRow => ({
   source_url: normalizeInstagramSourceUrl(place.sourceInstagramUrl),
   place_id: place.placeId ?? null,
   map_url: place.mapUrl ?? null,
-  status: place.status,
-  created_at: place.createdAt,
-  updated_at: place.updatedAt
+  status: place.status
 });
 
 const mapPlaceUpdateToRow = (updates: PlaceUpdate): Partial<SavedPlaceRow> => ({
@@ -56,17 +54,16 @@ const mapPlaceUpdateToRow = (updates: PlaceUpdate): Partial<SavedPlaceRow> => ({
     : {}),
   ...(updates.placeId !== undefined ? { place_id: updates.placeId ?? null } : {}),
   ...(updates.mapUrl !== undefined ? { map_url: updates.mapUrl ?? null } : {}),
-  ...(updates.status !== undefined ? { status: updates.status } : {}),
-  updated_at: new Date().toISOString()
+  ...(updates.status !== undefined ? { status: updates.status } : {})
 });
 
 const toSupabaseError = (action: string, message?: string) =>
   new Error(`Supabase saved places ${action} failed${message ? `: ${message}` : '.'}`);
 
 export class SupabaseSavedPlacesRepository implements SavedPlacesRepository {
-  constructor(private readonly supabase: SavedPlacesSupabaseClient) {}
+  constructor(private readonly supabase: SupabaseClient) {}
 
-  private async findExistingPlace(place: PlaceCard) {
+  private async findExistingPlace(place: NewPlace) {
     if (place.placeId) {
       const { data, error } = await this.supabase
         .from('saved_places')
@@ -112,7 +109,7 @@ export class SupabaseSavedPlacesRepository implements SavedPlacesRepository {
     return (data ?? []).map(mapRowToPlace);
   }
 
-  async createPlace(place: PlaceCard) {
+  async createPlace(place: NewPlace) {
     const normalizedPlace = {
       ...place,
       sourceInstagramUrl: normalizeInstagramSourceUrl(place.sourceInstagramUrl)

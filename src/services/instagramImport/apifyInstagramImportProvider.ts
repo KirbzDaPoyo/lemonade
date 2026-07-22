@@ -24,24 +24,6 @@ const getImportErrorMessage = async (error: unknown) => {
   return error instanceof Error ? error.message : 'Instagram import failed.';
 };
 
-const logSanitizedImport = (result: InstagramImportResult) => {
-  console.log('[instagram-import]', {
-    caption: result.caption?.trim() ? 'present' : 'empty',
-    hashtags: result.hashtags,
-    mentions: result.mentions,
-    taggedUsers: result.taggedUsers,
-    collaborators: result.collaborators,
-    location: {
-      name: result.locationName,
-      address: result.locationAddress,
-      city: result.locationCity,
-      country: result.locationCountry,
-      lat: result.locationLat,
-      lng: result.locationLng
-    }
-  });
-};
-
 export const apifyInstagramImportProvider: InstagramImportProvider = {
   async importUrl({ url }: InstagramImportInput) {
     const supabase = createSupabaseClient();
@@ -68,8 +50,6 @@ export const apifyInstagramImportProvider: InstagramImportProvider = {
     if (!data?.data) {
       throw new Error('Instagram import returned no useful metadata.');
     }
-
-    logSanitizedImport(data.data);
 
     return data.data;
   }

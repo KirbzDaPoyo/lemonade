@@ -1,20 +1,12 @@
+import type { PlaceSearchFunctionResponse } from '../../../supabase/functions/_shared/placeSearchContract';
 import { createSupabaseClient } from '../../lib/supabaseClient';
-import { PlaceCandidate } from '../../types/place';
 import { mockPlaceSearchService } from './mockPlaceSearchService';
-import { PlaceSearchQuery, PlaceSearchService } from './types';
-
-type PlaceSearchFunctionResponse = {
-  candidates?: PlaceCandidate[];
-  error?: {
-    code?: string;
-    message?: string;
-  };
-};
+import type { PlaceSearchProvider, PlaceSearchQuery } from './types';
 
 const getFriendlyMessage = (message?: string) =>
   message || 'Google Places search is unavailable right now. Try again later.';
 
-export const googlePlacesSearchService: PlaceSearchService = {
+export const googlePlacesSearchService: PlaceSearchProvider = {
   async searchPlaces(query: PlaceSearchQuery) {
     const supabase = createSupabaseClient();
 

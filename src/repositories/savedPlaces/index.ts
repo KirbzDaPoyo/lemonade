@@ -2,7 +2,7 @@ import { createSupabaseClient } from '../../lib/supabaseClient';
 import { SupabaseSavedPlacesRepository } from './SupabaseSavedPlacesRepository';
 import { SavedPlacesRepository } from './types';
 
-export type { PlaceInput, PlaceUpdate, SavedPlacesRepository } from './types';
+export type { NewPlace, PlaceInput, PlaceUpdate, SavedPlacesRepository } from './types';
 
 export type SavedPlacesRepositoryConfiguration = {
   repository?: SavedPlacesRepository;

@@ -1,41 +1,17 @@
+import type {
+  PlaceCandidate as SharedPlaceCandidate,
+  PlaceCandidateProvider as SharedPlaceCandidateProvider,
+  PlaceCategory as SharedPlaceCategory
+} from '../../supabase/functions/_shared/placeSearchContract';
 import type { PlaceExtractionResult } from './extraction';
 
-export type PlaceCategory =
-  | 'cafe'
-  | 'restaurant'
-  | 'street_food'
-  | 'dessert'
-  | 'bar'
-  | 'market'
-  | 'other';
+export type PlaceCategory = SharedPlaceCategory;
 
 export type PlaceStatus = 'want_to_go' | 'visited' | 'favorite' | 'skip';
 
-export type PlaceCandidateProvider = 'mock' | 'google_places';
+export type PlaceCandidateProvider = SharedPlaceCandidateProvider;
 
-export type PlaceCandidate = {
-  provider: PlaceCandidateProvider;
-  providerPlaceId: string;
-  name: string;
-  address: string;
-  areaCity: string;
-  category: PlaceCategory;
-  cuisineOrSpecialty?: string;
-  tags: string[];
-  mapUrl?: string;
-  latitude?: number;
-  longitude?: number;
-  primaryType?: string;
-  rating?: number;
-  userRatingCount?: number;
-  matchedQuery?: string;
-  matchScore?: number;
-  matchedReason?: string;
-  matchedConfidence?: number;
-  matchedParsedPlaceName?: string;
-  matchedParsedAddress?: string;
-  matchedSourceSignal?: string;
-};
+export type PlaceCandidate = SharedPlaceCandidate;
 
 export type PlaceCard = {
   id: string;

@@ -200,25 +200,6 @@ const normalizeItem = (item: ApifyInstagramItem, sourceUrl: string, inputUrl: st
     rawType: item.type
   };
 
-  console.log(
-    'instagram-import normalized',
-    JSON.stringify({
-      caption: normalized.caption?.trim() ? 'present' : 'empty',
-      hashtags: normalized.hashtags,
-      mentions: normalized.mentions,
-      taggedUsers: normalized.taggedUsers,
-      collaborators: normalized.collaborators,
-      location: {
-        name: normalized.locationName,
-        address: normalized.locationAddress,
-        city: normalized.locationCity,
-        country: normalized.locationCountry,
-        lat: normalized.locationLat,
-        lng: normalized.locationLng
-      }
-    })
-  );
-
   return normalized;
 };
 

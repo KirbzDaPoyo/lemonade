@@ -1,24 +1,12 @@
+import type {
+  PlaceSearchCandidate as SharedPlaceSearchCandidate,
+  PlaceSearchSourceSignal as SharedPlaceSearchSourceSignal
+} from '../../supabase/functions/_shared/placeSearchContract';
 import type { GeoContext } from './geo';
 import type { PlaceCategory } from './place';
 
-export type PlaceSearchSourceSignal =
-  | 'pin_line'
-  | 'raw_handle'
-  | 'tagged_user'
-  | 'collaborator'
-  | 'title_line'
-  | 'address_line'
-  | 'instagram_location'
-  | 'user_hint';
-
-export type PlaceSearchCandidate = {
-  query: string;
-  reason: string;
-  confidence: number;
-  parsedPlaceName?: string;
-  parsedAddress?: string;
-  sourceSignal: PlaceSearchSourceSignal;
-};
+export type PlaceSearchSourceSignal = SharedPlaceSearchSourceSignal;
+export type PlaceSearchCandidate = SharedPlaceSearchCandidate;
 
 export type PlaceExtractionResult = {
   placeName: string | null;

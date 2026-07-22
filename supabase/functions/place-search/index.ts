@@ -1,52 +1,18 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
+import type {
+  GeoContext,
+  PlaceCandidate,
+  PlaceCategory,
+  PlaceSearchCandidate,
+  PlaceSearchFunctionResponse,
+  PlaceSearchRequest as SharedPlaceSearchRequest
+} from '../_shared/placeSearchContract.ts';
 
-type PlaceCategory =
-  | 'cafe'
-  | 'restaurant'
-  | 'street_food'
-  | 'dessert'
-  | 'bar'
-  | 'market'
-  | 'other';
+type SearchCandidateInput = Pick<PlaceSearchCandidate, 'query'> &
+  Partial<Omit<PlaceSearchCandidate, 'query'>>;
 
-type LocationBiasRectangle = {
-  low: { latitude: number; longitude: number };
-  high: { latitude: number; longitude: number };
-};
-
-type GeoContext = {
-  regionCode: string;
-  searchSuffix: string;
-  locationBias: LocationBiasRectangle;
-};
-
-type SearchSourceSignal =
-  | 'pin_line'
-  | 'raw_handle'
-  | 'tagged_user'
-  | 'collaborator'
-  | 'title_line'
-  | 'address_line'
-  | 'instagram_location'
-  | 'user_hint';
-
-type SearchCandidateInput = {
-  query: string;
-  reason?: string;
-  confidence?: number;
-  parsedPlaceName?: string;
-  parsedAddress?: string;
-  sourceSignal?: SearchSourceSignal;
-};
-
-type PlaceSearchRequest = {
-  query?: string;
+type PlaceSearchRequest = Partial<Omit<SharedPlaceSearchRequest, 'searchCandidates'>> & {
   searchCandidates?: Array<string | SearchCandidateInput>;
-  sourceInstagramUrl?: string;
-  areaOrCity?: string;
-  category?: PlaceCategory;
-  cuisineOrSpecialty?: string;
-  geoContext?: GeoContext;
 };
 
 type GoogleAddressComponent = {
@@ -68,14 +34,9 @@ type GooglePlace = {
   addressComponents?: GoogleAddressComponent[];
 };
 
-type RankedCandidate = ReturnType<typeof mapPlace> & {
+type RankedCandidate = PlaceCandidate & {
   matchedQuery: string;
   matchScore: number;
-  matchedReason?: string;
-  matchedConfidence?: number;
-  matchedParsedPlaceName?: string;
-  matchedParsedAddress?: string;
-  matchedSourceSignal?: string;
 };
 
 const corsHeaders = {
@@ -161,7 +122,7 @@ const sourceBoost: Record<string, number> = {
   user_hint: 40
 };
 
-const jsonResponse = (body: unknown, status = 200) =>
+const jsonResponse = (body: PlaceSearchFunctionResponse, status = 200) =>
   new Response(JSON.stringify(body), {
     status,
     headers: { ...corsHeaders, 'Content-Type': 'application/json' }
@@ -326,31 +287,25 @@ const scorePlace = (
   );
 };
 
-function mapPlace(place: GooglePlace) {
+function mapPlace(place: GooglePlace): PlaceCandidate {
   const primaryType = place.primaryType;
   const areaCity = deriveAreaOrCity(place);
 
   return {
     provider: 'google_places',
     providerPlaceId: place.id ?? '',
-    place_id: place.id ?? '',
     name: place.displayName?.text ?? 'Unnamed place',
     address: place.formattedAddress ?? 'Address to confirm',
-    formatted_address: place.formattedAddress ?? undefined,
     areaCity,
-    area_or_city: areaCity,
     category: mapCategory(primaryType),
     cuisineOrSpecialty: primaryType?.replaceAll('_', ' '),
     tags: compact([primaryType?.replaceAll('_', '-')]),
     mapUrl: place.googleMapsUri,
-    google_maps_uri: place.googleMapsUri,
     latitude: place.location?.latitude,
     longitude: place.location?.longitude,
     primaryType,
     userRatingCount: place.userRatingCount,
-    primary_type: primaryType,
-    rating: place.rating,
-    user_rating_count: place.userRatingCount
+    rating: place.rating
   };
 }
 

@@ -12,6 +12,7 @@ import {
 } from 'react-native';
 
 import { AppButton } from '../components/AppButton';
+import { ScreenHeader } from '../components/screen-header';
 import { getDefaultGeoContext } from '../config/geoContext';
 import { AppNavigation } from '../navigation/types';
 import { instagramImportProvider } from '../services/instagramImport';
@@ -83,10 +84,6 @@ export function AddPlaceScreen({ navigation }: AddPlaceScreenProps) {
     const candidates = await placeSearchService.searchPlaces({
       query: searchQuery,
       searchCandidates: prioritizeManualSearch(extraction, manualPlaceName),
-      sourceInstagramUrl: sourceInstagramUrl.trim(),
-      areaOrCity: extraction.areaOrCity ?? undefined,
-      category: extraction.category ?? undefined,
-      cuisineOrSpecialty: extraction.cuisineOrSpecialty ?? undefined,
       geoContext: extraction.geoContext
     });
 
@@ -209,11 +206,7 @@ export function AddPlaceScreen({ navigation }: AddPlaceScreenProps) {
       style={styles.screen}
     >
       <ScrollView contentContainerStyle={styles.content} keyboardShouldPersistTaps="handled">
-        <View style={styles.header}>
-          <AppButton label="Back" onPress={navigation.goBack} variant="ghost" />
-          <Text style={styles.title}>Add Place</Text>
-          <View style={styles.headerSpacer} />
-        </View>
+        <ScreenHeader onBack={navigation.goBack} title="Add Place" />
 
         <View style={styles.fieldGroup}>
           <Text style={styles.label}>Instagram reel or post URL</Text>
@@ -270,19 +263,6 @@ const styles = StyleSheet.create({
     gap: spacing.lg,
     padding: spacing.lg,
     paddingBottom: spacing.xxl
-  },
-  header: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between'
-  },
-  title: {
-    color: colors.text,
-    fontSize: 24,
-    fontWeight: '900'
-  },
-  headerSpacer: {
-    width: 72
   },
   fieldGroup: {
     gap: spacing.sm

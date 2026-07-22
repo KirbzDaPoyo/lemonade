@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Alert, Linking, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { AppButton } from '../components/AppButton';
+import { StorageErrorBanner } from '../components/storage-error-banner';
 import { AppNavigation } from '../navigation/types';
 import { getTagLabel } from '../services/tags/placeTagNormalizer';
 import { usePlaces } from '../store/PlacesContext';
@@ -34,7 +35,7 @@ const openExternalUrl = async (url: string, destination: string) => {
 };
 
 export function PlaceDetailScreen({ navigation, placeId }: PlaceDetailScreenProps) {
-  const { deletePlace, places, storageError, updatePlace, updatePlaceStatus } = usePlaces();
+  const { deletePlace, places, storageError, updatePlace } = usePlaces();
   const place = places.find((savedPlace) => savedPlace.id === placeId);
   const [notesDraft, setNotesDraft] = useState('');
   const [isSavingNotes, setIsSavingNotes] = useState(false);
@@ -93,7 +94,7 @@ export function PlaceDetailScreen({ navigation, placeId }: PlaceDetailScreenProp
     setPendingStatus(status);
 
     try {
-      const didUpdate = await updatePlaceStatus(place.id, status);
+      const didUpdate = await updatePlace(place.id, { status });
 
       if (!didUpdate) {
         Alert.alert(
@@ -159,12 +160,7 @@ export function PlaceDetailScreen({ navigation, placeId }: PlaceDetailScreenProp
         <Text style={styles.meta}>{place.areaCity}</Text>
       </View>
 
-      {storageError ? (
-        <View style={styles.errorBanner}>
-          <Text style={styles.errorTitle}>Storage issue</Text>
-          <Text style={styles.errorBody}>{storageError}</Text>
-        </View>
-      ) : null}
+      {storageError ? <StorageErrorBanner message={storageError} /> : null}
 
       <Section title="Status">
         <View style={styles.statusGrid}>
@@ -310,24 +306,6 @@ const styles = StyleSheet.create({
     borderWidth: 1,
     gap: spacing.md,
     padding: spacing.lg
-  },
-  errorBanner: {
-    backgroundColor: '#fff3f0',
-    borderColor: colors.danger,
-    borderRadius: radii.md,
-    borderWidth: 1,
-    gap: spacing.xs,
-    padding: spacing.md
-  },
-  errorTitle: {
-    color: colors.danger,
-    fontSize: 14,
-    fontWeight: '900'
-  },
-  errorBody: {
-    color: colors.text,
-    fontSize: 13,
-    lineHeight: 18
   },
   sectionTitle: {
     color: colors.text,

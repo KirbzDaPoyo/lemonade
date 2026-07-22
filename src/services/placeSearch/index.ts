@@ -9,4 +9,4 @@ export const placeSearchService =
 
 export { mockPlaceSearchService } from './mockPlaceSearchService';
 export { googlePlacesSearchService } from './googlePlacesSearchService';
-export type { PlaceSearchProvider, PlaceSearchQuery, PlaceSearchService } from './types';
+export type { PlaceSearchProvider, PlaceSearchQuery } from './types';

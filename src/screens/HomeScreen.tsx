@@ -4,6 +4,7 @@ import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-nativ
 import { AppButton } from '../components/AppButton';
 import { FilterBar } from '../components/FilterBar';
 import { PlaceCardRow } from '../components/PlaceCardRow';
+import { StorageErrorBanner } from '../components/storage-error-banner';
 import { AppNavigation } from '../navigation/types';
 import { findPlaceFilterOption, getPlaceFilterOptions, PlaceFilterKey } from '../services/placeFilters';
 import { usePlaces } from '../store/PlacesContext';
@@ -68,12 +69,7 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
         onPlaceFilterChange={setSelectedPlaceFilter}
       />
 
-      {storageError ? (
-        <View style={styles.errorBanner}>
-          <Text style={styles.errorTitle}>Storage issue</Text>
-          <Text style={styles.errorBody}>{storageError}</Text>
-        </View>
-      ) : null}
+      {storageError ? <StorageErrorBanner message={storageError} /> : null}
 
       {isLoading ? (
         <View style={styles.loadingState}>
@@ -146,24 +142,6 @@ const styles = StyleSheet.create({
     color: colors.muted,
     fontSize: 15,
     fontWeight: '700'
-  },
-  errorBanner: {
-    backgroundColor: '#fff3f0',
-    borderColor: colors.danger,
-    borderRadius: 8,
-    borderWidth: 1,
-    gap: spacing.xs,
-    padding: spacing.md
-  },
-  errorTitle: {
-    color: colors.danger,
-    fontSize: 14,
-    fontWeight: '900'
-  },
-  errorBody: {
-    color: colors.text,
-    fontSize: 13,
-    lineHeight: 18
   },
   emptyState: {
     alignItems: 'center',

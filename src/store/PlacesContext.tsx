@@ -21,7 +21,6 @@ type PlacesContextValue = {
   storageError?: string;
   addPlace: (place: PlaceInput) => Promise<PlaceCard | undefined>;
   updatePlace: (id: string, updates: PlaceUpdate) => Promise<boolean>;
-  updatePlaceStatus: (id: string, status: PlaceCard['status']) => Promise<boolean>;
   deletePlace: (id: string) => Promise<boolean>;
 };
 
@@ -87,12 +86,9 @@ export function PlacesProvider({ children }: { children: ReactNode }) {
           return undefined;
         }
 
-        const now = new Date().toISOString();
-        const savedPlace: PlaceCard = {
+        const savedPlace = {
           ...place,
-          id: makeId(),
-          createdAt: now,
-          updatedAt: now
+          id: makeId()
         };
 
         try {
@@ -131,29 +127,6 @@ export function PlacesProvider({ children }: { children: ReactNode }) {
         } catch (error) {
           setStorageError(
             getErrorMessage('Saved place could not be updated.', error)
-          );
-          return false;
-        }
-      },
-      updatePlaceStatus: async (id, status) => {
-        if (!repository) {
-          setStorageError(configurationError);
-          return false;
-        }
-
-        try {
-          const persistedPlace = await repository.updatePlace(id, { status });
-
-          setPlaces((currentPlaces) =>
-            currentPlaces.map((place) =>
-              place.id === id ? persistedPlace : place
-            )
-          );
-          setStorageError(undefined);
-          return true;
-        } catch (error) {
-          setStorageError(
-            getErrorMessage('Saved place status could not be updated.', error)
           );
           return false;
         }

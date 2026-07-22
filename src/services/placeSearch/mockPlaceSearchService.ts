@@ -1,6 +1,6 @@
 import { mockPlaceCandidates } from '../../data/mockPlaces';
 import { PlaceCandidate } from '../../types/place';
-import { PlaceSearchQuery, PlaceSearchService } from './types';
+import type { PlaceSearchProvider, PlaceSearchQuery } from './types';
 
 const normalize = (value: string) => value.trim().toLowerCase();
 
@@ -46,7 +46,7 @@ const buildTypedFallback = (query: string): PlaceCandidate => ({
   mapUrl: undefined
 });
 
-export const mockPlaceSearchService: PlaceSearchService = {
+export const mockPlaceSearchService: PlaceSearchProvider = {
   async searchPlaces({ query, searchCandidates }: PlaceSearchQuery) {
     const primaryQuery = searchCandidates?.[0]?.query ?? query;
     const normalizedQuery = normalize(primaryQuery);

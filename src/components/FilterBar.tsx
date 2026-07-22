@@ -89,7 +89,9 @@ function Dropdown<T extends string>({
     <View style={styles.dropdown}>
       <Text style={styles.dropdownLabel}>{label}</Text>
       <Pressable
+        accessibilityLabel={`${label}: ${selectedLabel}`}
         accessibilityRole="button"
+        accessibilityState={{ expanded: open }}
         onPress={onToggle}
         style={({ pressed }) => [styles.dropdownButton, pressed && styles.pressed]}
       >
@@ -105,7 +107,9 @@ function Dropdown<T extends string>({
 
             return (
               <Pressable
+                accessibilityLabel={option.label}
                 accessibilityRole="button"
+                accessibilityState={{ selected }}
                 key={option.value}
                 onPress={() => onSelect(option.value)}
                 style={({ pressed }) => [

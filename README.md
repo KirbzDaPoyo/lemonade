@@ -2,7 +2,7 @@
 
 An MVP Expo app for saving cafes, restaurants, and vendors discovered from Instagram reels or posts.
 
-The MVP is intentionally based on user-initiated sharing or pasting. It stores the original Instagram URL and lets the user confirm a place from a mock place-search provider. It does not scrape Instagram, import Saved posts, read DMs, or call Instagram APIs.
+The MVP is intentionally based on user-initiated sharing or pasting. By default, the mobile client sends each submitted public Instagram URL to a Supabase Edge Function, which uses Apify's `apify/instagram-scraper` Actor to retrieve place metadata. The app does not import Saved posts, read DMs, call Instagram APIs directly, or download and rehost videos.
 
 ## What is included
 
@@ -10,7 +10,7 @@ The MVP is intentionally based on user-initiated sharing or pasting. It stores t
 - Add Place screen for an Instagram URL with a manual search fallback
 - Mock extraction service for AI-ready Instagram metadata parsing without calling a real AI API
 - Mock place-search service that returns candidate matches
-- Optional Instagram metadata import through Apify, called only from a Supabase Edge Function
+- Instagram metadata import through Apify by default, called only from a Supabase Edge Function
 - Candidate confirmation flow
 - Place Detail screen with source URL, map URL, tags, editable notes, and status updates
 - Supabase-backed cloud persistence for saved places
@@ -25,7 +25,7 @@ Install dependencies:
 npm install
 ```
 
-This includes `@react-native-async-storage/async-storage` for Supabase authentication sessions, `@supabase/supabase-js` for cloud persistence, and `react-native-url-polyfill` for React Native Supabase compatibility.
+Core dependencies include `@supabase/supabase-js` for cloud persistence and `react-native-url-polyfill` for React Native Supabase compatibility. Authentication session persistence is disabled because the MVP has no authentication flow.
 
 Create a local env file and configure Supabase:
 
@@ -166,14 +166,15 @@ It validates that the URL is a public Instagram post or reel URL, removes query 
 Limitations for the MVP:
 
 - Only user-submitted public Instagram post and reel URLs are processed.
-- The app does not scrape Instagram webpages, import Saved posts, or read DMs.
+- The mobile client never scrapes Instagram directly; the Edge Function delegates public-post metadata retrieval to Apify's scraper.
+- Saved posts and DMs are never accessed.
 - Videos are not downloaded or rehosted.
 - Engagement metrics are intentionally not stored.
 - If Apify fails or returns no useful metadata, the app asks for a manual place search hint and keeps the save flow usable.
 
 ## Hong Kong Place Search Accuracy
 
-Instagram import captures Apify metadata beyond captions, including tagged users, collaborators/coauthors, and location fields when Apify returns them. Development logging is sanitized: it reports whether a caption exists plus hashtags, mentions, tagged users, collaborators, and location text/coordinates, but it does not log API tokens or raw media URLs.
+Instagram import captures Apify metadata beyond captions, including tagged users, collaborators/coauthors, and location fields when Apify returns them. This metadata is used for place extraction but is not written to client or Edge Function logs.
 
 Place extraction now builds ordered search candidates from Instagram location name, tagged users, collaborators, caption mentions, caption place-name clues, and user hints. Usernames are converted into readable business-name queries and each query is geo-suffixed, defaulting to Hong Kong in development:
 

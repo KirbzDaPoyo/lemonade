@@ -17,6 +17,8 @@ export function AppButton({
   disabled = false,
   style
 }: AppButtonProps) {
+  const usesDarkLabel = variant === 'secondary' || variant === 'ghost';
+
   return (
     <Pressable
       accessibilityRole="button"
@@ -30,7 +32,7 @@ export function AppButton({
         style
       ]}
     >
-      <Text style={[styles.label, variant !== 'primary' && styles.secondaryLabel]}>
+      <Text style={[styles.label, usesDarkLabel && styles.darkLabel]}>
         {label}
       </Text>
     </Pressable>
@@ -71,7 +73,7 @@ const styles = StyleSheet.create({
     fontSize: 16,
     fontWeight: '700'
   },
-  secondaryLabel: {
+  darkLabel: {
     color: colors.text
   }
 });

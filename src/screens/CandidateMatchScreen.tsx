@@ -2,7 +2,9 @@ import { useRef, useState } from 'react';
 import { Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { AppButton } from '../components/AppButton';
+import { ScreenHeader } from '../components/screen-header';
 import { AppNavigation } from '../navigation/types';
+import type { PlaceInput } from '../repositories/savedPlaces/types';
 import { normalizePlaceTags } from '../services/tags/placeTagNormalizer';
 import { usePlaces } from '../store/PlacesContext';
 import { colors, radii, spacing } from '../theme';
@@ -15,6 +17,8 @@ type CandidateMatchScreenProps = {
   candidates: PlaceCandidate[];
 };
 
+type SavePlaceInput = Omit<PlaceInput, 'sourceInstagramUrl' | 'status'>;
+
 export function CandidateMatchScreen({
   navigation,
   draft,
@@ -24,6 +28,11 @@ export function CandidateMatchScreen({
   const [savingKey, setSavingKey] = useState<string>();
   const saveInFlightRef = useRef(false);
 
+  const extraction = draft.extraction;
+  const extractionSignals = [
+    ...(extraction?.vibeTags ?? []),
+    ...(extraction?.recommendedItems ?? [])
+  ];
   const saveOnce = async (
     saveKey: string,
     save: () => ReturnType<typeof addPlace>,
@@ -50,78 +59,72 @@ export function CandidateMatchScreen({
     }
   };
 
-
+  const savePlace = (saveKey: string, place: SavePlaceInput, failureMessage: string) =>
+    saveOnce(
+      saveKey,
+      () =>
+        addPlace({
+          ...place,
+          sourceInstagramUrl: draft.sourceInstagramUrl,
+          status: 'want_to_go'
+        }),
+      failureMessage
+    );
 
   const handleSaveCandidate = async (candidate: PlaceCandidate) => {
-    const extraction = draft.extraction;
     const cuisineOrSpecialty =
       candidate.cuisineOrSpecialty || extraction?.cuisineOrSpecialty || undefined;
     const mergedTags = normalizePlaceTags({
       placeName: candidate.name,
       category: candidate.category,
       cuisineOrSpecialty,
-      signals: [
-        ...candidate.tags,
-        ...(extraction?.vibeTags ?? []),
-        ...(extraction?.recommendedItems ?? []),
-      ]
+      signals: [...candidate.tags, ...extractionSignals]
     });
 
-    await saveOnce(
+    await savePlace(
       candidate.providerPlaceId,
-      () =>
-        addPlace({
-          placeName: candidate.name,
-          address: candidate.address,
-          areaCity: candidate.areaCity,
-          category: candidate.category,
-          cuisineOrSpecialty,
-          tags: mergedTags,
-          sourceInstagramUrl: draft.sourceInstagramUrl,
-          mapUrl: candidate.mapUrl,
-          placeId: candidate.providerPlaceId,
-          status: 'want_to_go'
-        }),
+      {
+        placeName: candidate.name,
+        address: candidate.address,
+        areaCity: candidate.areaCity,
+        category: candidate.category,
+        cuisineOrSpecialty,
+        tags: mergedTags,
+        mapUrl: candidate.mapUrl,
+        placeId: candidate.providerPlaceId
+      },
       'The place could not be saved. Check the storage error.'
     );
   };
 
   const handleSaveManually = async () => {
-    const extraction = draft.extraction;
+    const placeName = extraction?.placeName || draft.suggestedPlaceName;
+    const category = extraction?.category || 'other';
+    const cuisineOrSpecialty = extraction?.cuisineOrSpecialty || undefined;
     const manualTags = normalizePlaceTags({
-      placeName: extraction?.placeName || draft.suggestedPlaceName,
-      category: extraction?.category || 'other',
-      cuisineOrSpecialty: extraction?.cuisineOrSpecialty || undefined,
-      signals: [
-        ...(extraction?.vibeTags ?? []),
-        ...(extraction?.recommendedItems ?? []),
-      ]
+      placeName,
+      category,
+      cuisineOrSpecialty,
+      signals: extractionSignals
     });
 
-    await saveOnce(
+    await savePlace(
       'manual',
-      () =>
-        addPlace({
-          placeName: extraction?.placeName || draft.suggestedPlaceName,
-          address: 'Address to confirm',
-          areaCity: extraction?.areaOrCity || 'Area to confirm',
-          category: extraction?.category || 'other',
-          cuisineOrSpecialty: extraction?.cuisineOrSpecialty || undefined,
-          tags: manualTags,
-          sourceInstagramUrl: draft.sourceInstagramUrl,
-          status: 'want_to_go'
-        }),
+      {
+        placeName,
+        address: 'Address to confirm',
+        areaCity: extraction?.areaOrCity || 'Area to confirm',
+        category,
+        cuisineOrSpecialty,
+        tags: manualTags
+      },
       'The manual place could not be saved.'
     );
   };
 
   return (
     <View style={styles.screen}>
-      <View style={styles.header}>
-        <AppButton label="Back" onPress={navigation.goBack} variant="ghost" />
-        <Text style={styles.title}>Match Place</Text>
-        <View style={styles.headerSpacer} />
-      </View>
+      <ScreenHeader onBack={navigation.goBack} title="Match Place" />
 
       <View style={styles.draftBox}>
         <Text style={styles.draftLabel}>Draft from Instagram</Text>
@@ -225,19 +228,6 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: spacing.lg,
     padding: spacing.lg
-  },
-  header: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between'
-  },
-  title: {
-    color: colors.text,
-    fontSize: 24,
-    fontWeight: '900'
-  },
-  headerSpacer: {
-    width: 72
   },
   draftBox: {
     backgroundColor: colors.surfaceMuted,

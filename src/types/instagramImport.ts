@@ -1,4 +1,4 @@
-export type RawInstagramImportResult = {
+export type InstagramImportResult = {
   sourceUrl: string;
   inputUrl: string;
   shortcode?: string;
@@ -21,5 +21,3 @@ export type RawInstagramImportResult = {
   productType?: string;
   rawType?: string;
 };
-
-export type InstagramImportResult = RawInstagramImportResult;
