@@ -66,6 +66,7 @@ export type PlaceCandidate = {
   latitude?: number;
   longitude?: number;
   primaryType?: string;
+  providerCategoryRecognized?: boolean;
   rating?: number;
   userRatingCount?: number;
   matchedQuery?: string;

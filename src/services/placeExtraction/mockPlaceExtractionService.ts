@@ -1,5 +1,4 @@
 import { inferGeoContext } from '../../config/geoContext';
-import { normalizePlaceTags } from '../tags/placeTagNormalizer';
 import type { PlaceExtractionResult, PlaceSearchCandidate, PlaceSearchSourceSignal } from '../../types/extraction';
 import type { PlaceCategory } from '../../types/place';
 import type { PlaceExtractionInput, PlaceExtractionService } from './types';
@@ -546,23 +545,7 @@ const buildSearchCandidates = (
         ]
       : [])
   ];
-  const rejected = candidates.filter(isWeakQuery).map((candidate) => candidate.query);
   const accepted = candidates.filter((candidate) => !isWeakQuery(candidate));
-
-  if (process.env.NODE_ENV !== 'production') {
-    console.log('[caption-parser]', {
-      pinLines: signals.pinLines.map((line) => line.text),
-      rawHandles: signals.rawHandles,
-      possibleTitleLine: signals.possibleTitleLine,
-      generatedSearchCandidates: accepted.map((candidate) => ({
-        query: candidate.query,
-        reason: candidate.reason,
-        confidence: candidate.confidence,
-        sourceSignal: candidate.sourceSignal
-      })),
-      rejectedWeakQueries: rejected
-    });
-  }
 
   return unique(accepted, (candidate) => candidate.query)
     .sort(
@@ -624,11 +607,10 @@ const countCorroboratingNameEvidence = (
 export const mockPlaceExtractionService: PlaceExtractionService = {
   async extractPlace(input: PlaceExtractionInput): Promise<PlaceExtractionResult> {
     const importData = input.instagramImport;
-    const rawCaption = compact([input.captionText, importData?.caption]).join('\n');
+    const rawCaption = importData?.caption ?? '';
     const signals = parseCaptionSignals(rawCaption);
     const combinedText = compact([
       input.userHint,
-      input.sharedText,
       rawCaption,
       importData?.hashtags.join(' '),
       importData?.mentions.join(' '),
@@ -658,7 +640,6 @@ export const mockPlaceExtractionService: PlaceExtractionService = {
         signals.pinLines.some((line) => line.parsedAddress) ||
         signals.addressLikeLines.length
     );
-    const hasAreaEvidence = Boolean(importData?.locationCity || signals.districtHints.length);
     const confidence = Math.min(
       0.08 +
         (primaryCandidate?.confidence ?? 0) * 0.45 +
@@ -668,46 +649,17 @@ export const mockPlaceExtractionService: PlaceExtractionService = {
         (category ? 0.04 : 0),
       0.95
     );
-    const missingFields = [
-      !placeName ? 'placeName' : undefined,
-      !hasAddressEvidence ? 'address' : undefined,
-      !hasAreaEvidence ? 'areaOrCity' : undefined,
-      !category ? 'category' : undefined,
-      !cuisineOrSpecialty ? 'cuisineOrSpecialty' : undefined
-    ].filter((field): field is string => Boolean(field));
-
     return {
       placeName,
       areaOrCity,
       category,
       cuisineOrSpecialty,
       recommendedItems: specialties,
-      vibeTags: normalizePlaceTags({
-        placeName,
-        category,
-        cuisineOrSpecialty,
-        signals: [combinedText, ...specialties, ...(importData?.hashtags ?? [])]
-      }),
-      visibleClues: [
-        'Instagram URL was provided by the user.',
-        ...(rawCaption ? ['Caption text was parsed for place signals.'] : []),
-        ...(signals.pinLines.length ? ['Pin-marker lines were available.'] : []),
-        ...(signals.rawHandles.length ? ['Raw Instagram handles were available.'] : []),
-        ...(importData?.locationName ? ['Instagram location metadata was available.'] : []),
-        ...(importData?.taggedUsers.length ? ['Tagged users were available as place clues.'] : []),
-        ...(importData?.collaborators.length ? ['Collaborators were available as place clues.'] : []),
-        ...(input.userHint ? ['User hint was provided.'] : [])
-      ],
+      vibeTags: [],
       searchQuery: searchCandidates[0]?.query ?? '',
       searchCandidates,
       geoContext,
-      confidence,
-      needsUserConfirmation:
-        confidence < 0.65 ||
-        !searchCandidates.length ||
-        missingFields.includes('placeName') ||
-        missingFields.includes('address'),
-      missingFields
+      confidence
     };
   }
 };

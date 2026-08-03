@@ -1,7 +1,3 @@
-import { PlaceCategory, PlaceStatus } from './place';
+import type { PlaceStatus } from './place';
 
-export type PlaceFilters = {
-  status?: PlaceStatus | 'all';
-  category?: PlaceCategory | 'all';
-  tag?: string;
-};
+export type PlaceStatusFilter = PlaceStatus | 'favorite' | 'all';

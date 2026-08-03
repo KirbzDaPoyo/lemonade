@@ -1,4 +1,4 @@
-import { PlaceCard } from '../../types/place';
+import type { PlaceCard, PlaceTag } from '../../types/place';
 
 export type PlaceInput = Omit<PlaceCard, 'id' | 'createdAt' | 'updatedAt'>;
 export type NewPlace = PlaceInput & Pick<PlaceCard, 'id'>;
@@ -16,6 +16,10 @@ export type PlaceUpdate = Partial<
 
 export interface SavedPlacesRepository {
   listPlaces(): Promise<PlaceCard[]>;
+  listTags(): Promise<PlaceTag[]>;
+  createTag(name: string): Promise<PlaceTag>;
+  renameTag(id: string, name: string): Promise<void>;
+  deleteTag(id: string): Promise<void>;
   createPlace(place: NewPlace): Promise<PlaceCard>;
   updatePlace(id: string, updates: PlaceUpdate): Promise<PlaceCard>;
   deletePlace(id: string): Promise<void>;

@@ -15,11 +15,8 @@ export type PlaceExtractionResult = {
   cuisineOrSpecialty: string | null;
   recommendedItems: string[];
   vibeTags: string[];
-  visibleClues: string[];
   searchQuery: string;
   searchCandidates: PlaceSearchCandidate[];
   geoContext: GeoContext;
   confidence: number;
-  needsUserConfirmation: boolean;
-  missingFields: string[];
 };

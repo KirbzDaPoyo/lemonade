@@ -5,7 +5,11 @@ import { AppButton } from '../components/AppButton';
 import { ScreenHeader } from '../components/screen-header';
 import { AppNavigation } from '../navigation/types';
 import type { PlaceInput } from '../repositories/savedPlaces/types';
-import { normalizePlaceTags } from '../services/tags/placeTagNormalizer';
+import {
+  resolveCandidatePlaceCategory,
+  resolveManualPlaceCategory
+} from '../services/classification/place-category-resolver';
+import { suggestUserTags } from '../services/tags/user-tags';
 import { usePlaces } from '../store/PlacesContext';
 import { colors, radii, spacing } from '../theme';
 import { DraftPlaceEntry, PlaceCandidate } from '../types/place';
@@ -17,19 +21,22 @@ type CandidateMatchScreenProps = {
   candidates: PlaceCandidate[];
 };
 
-type SavePlaceInput = Omit<PlaceInput, 'sourceInstagramUrl' | 'status'>;
+type SavePlaceInput = Omit<PlaceInput, 'sourceInstagramUrl' | 'status' | 'isFavorite'>;
 
 export function CandidateMatchScreen({
   navigation,
   draft,
   candidates
 }: CandidateMatchScreenProps) {
-  const { addPlace } = usePlaces();
+  const { addPlace, availableTags } = usePlaces();
   const [savingKey, setSavingKey] = useState<string>();
   const saveInFlightRef = useRef(false);
 
   const extraction = draft.extraction;
-  const extractionSignals = [
+  const availableTagNames = availableTags.map((tag) => tag.name);
+  const sharedTagClues = [
+    extraction?.placeName,
+    extraction?.cuisineOrSpecialty,
     ...(extraction?.vibeTags ?? []),
     ...(extraction?.recommendedItems ?? [])
   ];
@@ -66,20 +73,23 @@ export function CandidateMatchScreen({
         addPlace({
           ...place,
           sourceInstagramUrl: draft.sourceInstagramUrl,
+          isFavorite: false,
           status: 'want_to_go'
         }),
       failureMessage
     );
 
   const handleSaveCandidate = async (candidate: PlaceCandidate) => {
+    const category = resolveCandidatePlaceCategory(candidate, extraction);
     const cuisineOrSpecialty =
       candidate.cuisineOrSpecialty || extraction?.cuisineOrSpecialty || undefined;
-    const mergedTags = normalizePlaceTags({
-      placeName: candidate.name,
-      category: candidate.category,
+    const suggestedTags = suggestUserTags(availableTagNames, [
+      candidate.name,
+      category,
       cuisineOrSpecialty,
-      signals: [...candidate.tags, ...extractionSignals]
-    });
+      ...candidate.tags,
+      ...sharedTagClues
+    ]);
 
     await savePlace(
       candidate.providerPlaceId,
@@ -87,9 +97,9 @@ export function CandidateMatchScreen({
         placeName: candidate.name,
         address: candidate.address,
         areaCity: candidate.areaCity,
-        category: candidate.category,
+        category,
         cuisineOrSpecialty,
-        tags: mergedTags,
+        tags: suggestedTags,
         mapUrl: candidate.mapUrl,
         placeId: candidate.providerPlaceId
       },
@@ -99,14 +109,14 @@ export function CandidateMatchScreen({
 
   const handleSaveManually = async () => {
     const placeName = extraction?.placeName || draft.suggestedPlaceName;
-    const category = extraction?.category || 'other';
+    const category = resolveManualPlaceCategory(placeName, extraction);
     const cuisineOrSpecialty = extraction?.cuisineOrSpecialty || undefined;
-    const manualTags = normalizePlaceTags({
+    const suggestedTags = suggestUserTags(availableTagNames, [
       placeName,
       category,
       cuisineOrSpecialty,
-      signals: extractionSignals
-    });
+      ...sharedTagClues
+    ]);
 
     await savePlace(
       'manual',
@@ -116,7 +126,7 @@ export function CandidateMatchScreen({
         areaCity: extraction?.areaOrCity || 'Area to confirm',
         category,
         cuisineOrSpecialty,
-        tags: manualTags
+        tags: suggestedTags
       },
       'The manual place could not be saved.'
     );
@@ -338,4 +348,3 @@ const styles = StyleSheet.create({
     fontSize: 15
   }
 });
-

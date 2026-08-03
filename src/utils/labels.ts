@@ -13,6 +13,7 @@ export const categoryLabels: Record<PlaceCategory, string> = {
 export const statusLabels: Record<PlaceStatus, string> = {
   want_to_go: 'Want to go',
   visited: 'Visited',
-  favorite: 'Favorite',
-  skip: 'Skip'
+  skipped: 'Skip'
 };
+
+export const favoriteLabel = 'Favorite';

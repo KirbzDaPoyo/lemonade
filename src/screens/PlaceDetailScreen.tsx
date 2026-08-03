@@ -2,20 +2,21 @@ import { useEffect, useRef, useState } from 'react';
 import { Alert, Linking, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 
 import { AppButton } from '../components/AppButton';
+import { UserTagsEditor } from '../components/user-tags-editor';
 import { StorageErrorBanner } from '../components/storage-error-banner';
 import { AppNavigation } from '../navigation/types';
-import { getTagLabel } from '../services/tags/placeTagNormalizer';
+import { addUserTag, deleteUserTag } from '../services/tags/user-tags';
 import { usePlaces } from '../store/PlacesContext';
 import { colors, radii, spacing } from '../theme';
-import { PlaceStatus } from '../types/place';
-import { categoryLabels, statusLabels } from '../utils/labels';
+import type { PlaceStatus, PlaceTag } from '../types/place';
+import { favoriteLabel, statusLabels } from '../utils/labels';
 
 type PlaceDetailScreenProps = {
   navigation: AppNavigation;
   placeId: string;
 };
 
-const statusOptions: PlaceStatus[] = ['want_to_go', 'visited', 'favorite', 'skip'];
+const statusOptions: PlaceStatus[] = ['want_to_go', 'visited', 'skipped'];
 
 const openExternalUrl = async (url: string, destination: string) => {
   try {
@@ -35,12 +36,23 @@ const openExternalUrl = async (url: string, destination: string) => {
 };
 
 export function PlaceDetailScreen({ navigation, placeId }: PlaceDetailScreenProps) {
-  const { deletePlace, places, storageError, updatePlace } = usePlaces();
+  const {
+    availableTags,
+    createTag,
+    deletePlace,
+    deleteTag,
+    places,
+    renameTag,
+    storageError,
+    updatePlace
+  } = usePlaces();
   const place = places.find((savedPlace) => savedPlace.id === placeId);
   const [notesDraft, setNotesDraft] = useState('');
   const [isSavingNotes, setIsSavingNotes] = useState(false);
+  const [isUpdatingFavorite, setIsUpdatingFavorite] = useState(false);
   const [pendingStatus, setPendingStatus] = useState<PlaceStatus | null>(null);
-  const statusUpdateInFlight = useRef(false);
+  const placeStateUpdateInFlight = useRef(false);
+  const [pendingTagAction, setPendingTagAction] = useState<string | null>(null);
   useEffect(() => {
     setNotesDraft(place?.notes ?? '');
   }, [place?.id, place?.notes]);
@@ -86,11 +98,11 @@ export function PlaceDetailScreen({ navigation, placeId }: PlaceDetailScreenProp
   };
 
   const handleStatusChange = async (status: PlaceStatus) => {
-    if (!place || place.status === status || statusUpdateInFlight.current) {
+    if (!place || place.status === status || placeStateUpdateInFlight.current) {
       return;
     }
 
-    statusUpdateInFlight.current = true;
+    placeStateUpdateInFlight.current = true;
     setPendingStatus(status);
 
     try {
@@ -108,10 +120,149 @@ export function PlaceDetailScreen({ navigation, placeId }: PlaceDetailScreenProp
         `The status could not be changed to ${statusLabels[status]}.`
       );
     } finally {
-      statusUpdateInFlight.current = false;
+      placeStateUpdateInFlight.current = false;
       setPendingStatus(null);
     }
   };
+
+  const handleFavoriteToggle = async () => {
+    if (!place || placeStateUpdateInFlight.current) {
+      return;
+    }
+
+    placeStateUpdateInFlight.current = true;
+    setIsUpdatingFavorite(true);
+
+    try {
+      const didUpdate = await updatePlace(place.id, { isFavorite: !place.isFavorite });
+
+      if (!didUpdate) {
+        Alert.alert('Favorite not updated', 'The Favorite setting could not be changed.');
+      }
+    } catch {
+      Alert.alert('Favorite not updated', 'The Favorite setting could not be changed.');
+    } finally {
+      placeStateUpdateInFlight.current = false;
+      setIsUpdatingFavorite(false);
+    }
+  };
+
+  const handleTagsChange = async (tags: string[], action: string) => {
+    if (!place || placeStateUpdateInFlight.current) {
+      return;
+    }
+
+    placeStateUpdateInFlight.current = true;
+    setPendingTagAction(action);
+
+    try {
+      const didUpdate = await updatePlace(place.id, { tags });
+
+      if (!didUpdate) {
+        Alert.alert('Tags not updated', 'Your tag changes could not be saved.');
+      }
+    } catch {
+      Alert.alert('Tags not updated', 'Your tag changes could not be saved.');
+    } finally {
+      placeStateUpdateInFlight.current = false;
+      setPendingTagAction(null);
+    }
+  };
+  const handleToggleTag = (tag: PlaceTag, assigned: boolean) => {
+    if (!place) {
+      return;
+    }
+
+    const nextTags = assigned
+      ? addUserTag(place.tags, tag.name)
+      : deleteUserTag(place.tags, tag.name);
+    void handleTagsChange(nextTags, `assign:${tag.id}`);
+  };
+
+  const handleCreateTag = async (name: string) => {
+    if (!place || placeStateUpdateInFlight.current) {
+      return;
+    }
+
+    placeStateUpdateInFlight.current = true;
+    setPendingTagAction('create');
+
+    try {
+      const createdTag = await createTag(name);
+
+      if (!createdTag) {
+        Alert.alert('Tag not created', 'The new tag could not be saved.');
+        return;
+      }
+
+      const didAssign = await updatePlace(place.id, {
+        tags: addUserTag(place.tags, createdTag.name)
+      });
+
+      if (!didAssign) {
+        Alert.alert('Tag created', 'The tag was created but could not be added to this place.');
+      }
+    } finally {
+      placeStateUpdateInFlight.current = false;
+      setPendingTagAction(null);
+    }
+  };
+
+  const handleRenameTag = async (tag: PlaceTag, name: string) => {
+    if (placeStateUpdateInFlight.current) {
+      return;
+    }
+
+    placeStateUpdateInFlight.current = true;
+    setPendingTagAction(`rename:${tag.id}`);
+
+    try {
+      const didRename = await renameTag(tag.id, name);
+
+      if (!didRename) {
+        Alert.alert('Tag not renamed', 'The tag could not be renamed.');
+      }
+    } finally {
+      placeStateUpdateInFlight.current = false;
+      setPendingTagAction(null);
+    }
+  };
+
+  const performDeleteTag = async (tag: PlaceTag) => {
+    if (placeStateUpdateInFlight.current) {
+      return;
+    }
+
+    placeStateUpdateInFlight.current = true;
+    setPendingTagAction(`delete:${tag.id}`);
+
+    try {
+      const didDelete = await deleteTag(tag.id);
+
+      if (!didDelete) {
+        Alert.alert('Tag not deleted', 'The tag could not be deleted.');
+      }
+    } finally {
+      placeStateUpdateInFlight.current = false;
+      setPendingTagAction(null);
+    }
+  };
+
+  const handleDeleteTag = (tag: PlaceTag) => {
+    Alert.alert(
+      `Delete "${tag.name}"?`,
+      'This removes the tag from every saved place. This cannot be undone.',
+      [
+        { text: 'Cancel', style: 'cancel' },
+        {
+          text: 'Delete Everywhere',
+          style: 'destructive',
+          onPress: () => void performDeleteTag(tag)
+        }
+      ]
+    );
+  };
+
 
   const handleDelete = () => {
     if (!place) {
@@ -146,6 +297,10 @@ export function PlaceDetailScreen({ navigation, placeId }: PlaceDetailScreenProp
   }
 
   const mapUrl = place.mapUrl;
+  const isPlaceStateUpdating =
+    pendingStatus !== null ||
+    isUpdatingFavorite ||
+    pendingTagAction !== null;
 
   return (
     <ScrollView contentContainerStyle={styles.content} style={styles.screen}>
@@ -155,7 +310,6 @@ export function PlaceDetailScreen({ navigation, placeId }: PlaceDetailScreenProp
       </View>
 
       <View style={styles.hero}>
-        <Text style={styles.category}>{categoryLabels[place.category]}</Text>
         <Text style={styles.title}>{place.placeName}</Text>
         <Text style={styles.meta}>{place.areaCity}</Text>
       </View>
@@ -166,7 +320,7 @@ export function PlaceDetailScreen({ navigation, placeId }: PlaceDetailScreenProp
         <View style={styles.statusGrid}>
           {statusOptions.map((status) => (
             <AppButton
-              disabled={pendingStatus !== null}
+              disabled={isPlaceStateUpdating}
               key={status}
               label={pendingStatus === status ? 'Updating...' : statusLabels[status]}
               onPress={() => handleStatusChange(status)}
@@ -177,21 +331,37 @@ export function PlaceDetailScreen({ navigation, placeId }: PlaceDetailScreenProp
         </View>
       </Section>
 
+      <Section title={favoriteLabel}>
+        <AppButton
+          disabled={isPlaceStateUpdating}
+          label={
+            isUpdatingFavorite
+              ? 'Updating...'
+              : place.isFavorite
+                ? 'Remove Favorite'
+                : 'Mark as Favorite'
+          }
+          onPress={handleFavoriteToggle}
+          variant={place.isFavorite ? 'primary' : 'secondary'}
+        />
+      </Section>
+
       <Section title="Details">
         <DetailLine label="Address" value={place.address} />
         <DetailLine label="Specialty" value={place.cuisineOrSpecialty || 'Not set'} />
         <DetailLine label="Place ID" value={place.placeId || 'Not set'} />
       </Section>
 
-      <Section title="Tags">
-        <View style={styles.tagRow}>
-          {place.tags.map((tag) => (
-            <View key={tag} style={styles.tag}>
-              <Text style={styles.tagText}>{getTagLabel(tag)}</Text>
-            </View>
-          ))}
-        </View>
-      </Section>
+      <UserTagsEditor
+        assignedTags={place.tags}
+        availableTags={availableTags}
+        disabled={isPlaceStateUpdating}
+        onCreateTag={(name) => void handleCreateTag(name)}
+        onDeleteTag={handleDeleteTag}
+        onRenameTag={(tag, name) => void handleRenameTag(tag, name)}
+        onToggleTag={handleToggleTag}
+        pendingAction={pendingTagAction}
+      />
 
       <Section title="Notes">
         <TextInput
@@ -283,12 +453,6 @@ const styles = StyleSheet.create({
   hero: {
     gap: spacing.xs
   },
-  category: {
-    color: colors.accent,
-    fontSize: 14,
-    fontWeight: '900',
-    textTransform: 'uppercase'
-  },
   title: {
     color: colors.text,
     fontSize: 32,
@@ -335,22 +499,6 @@ const styles = StyleSheet.create({
     fontSize: 15,
     lineHeight: 21
   },
-  tagRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm
-  },
-  tag: {
-    backgroundColor: colors.surfaceMuted,
-    borderRadius: radii.sm,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs
-  },
-  tagText: {
-    color: colors.muted,
-    fontSize: 13,
-    fontWeight: '800'
-  },
   notesInput: {
     backgroundColor: colors.background,
     borderColor: colors.border,
@@ -377,5 +525,3 @@ const styles = StyleSheet.create({
     flexGrow: 1
   }
 });
-
-

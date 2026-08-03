@@ -1,9 +1,8 @@
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { getTagLabel } from '../services/tags/placeTagNormalizer';
 import { colors, radii, spacing } from '../theme';
 import { PlaceCard } from '../types/place';
-import { categoryLabels, statusLabels } from '../utils/labels';
+import { favoriteLabel, statusLabels } from '../utils/labels';
 
 type PlaceCardRowProps = {
   place: PlaceCard;
@@ -23,11 +22,14 @@ export function PlaceCardRow({ place, onPress }: PlaceCardRowProps) {
             {place.placeName}
           </Text>
           <Text numberOfLines={1} style={styles.meta}>
-            {categoryLabels[place.category]} - {place.areaCity}
+            {place.areaCity}
           </Text>
         </View>
         <View style={styles.statusPill}>
-          <Text style={styles.statusText}>{statusLabels[place.status]}</Text>
+          <Text style={styles.statusText}>
+            {place.isFavorite ? `${favoriteLabel} - ` : ''}
+            {statusLabels[place.status]}
+          </Text>
         </View>
       </View>
       <Text numberOfLines={2} style={styles.address}>
@@ -36,7 +38,7 @@ export function PlaceCardRow({ place, onPress }: PlaceCardRowProps) {
       <View style={styles.tagRow}>
         {place.tags.slice(0, 3).map((tag) => (
           <View key={tag} style={styles.tag}>
-            <Text style={styles.tagText}>{getTagLabel(tag)}</Text>
+            <Text style={styles.tagText}>{tag}</Text>
           </View>
         ))}
       </View>

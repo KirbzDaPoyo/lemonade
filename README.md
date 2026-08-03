@@ -6,13 +6,14 @@ The MVP is intentionally based on user-initiated sharing or pasting. By default,
 
 ## What is included
 
-- Saved Places list with status and category filters
+- Saved Places list with status and user-tag filters
 - Add Place screen for an Instagram URL with a manual search fallback
 - Mock extraction service for AI-ready Instagram metadata parsing without calling a real AI API
 - Mock place-search service that returns candidate matches
 - Instagram metadata import through Apify by default, called only from a Supabase Edge Function
 - Candidate confirmation flow
 - Place Detail screen with source URL, map URL, tags, editable notes, and status updates
+- Independent lifecycle status and Favorite preference controls
 - Supabase-backed cloud persistence for saved places
 - Visible configuration errors when cloud storage is unavailable
 - TypeScript domain models and service interfaces designed for a future Google Places or Supabase integration
@@ -74,22 +75,41 @@ src/
   utils/                   Display labels and formatting helpers
 ```
 
-## Curated Tags
+## User-managed Tags
 
-Saved place tags are intentionally normalized into a controlled, filterable vocabulary. Instagram hashtags and account-like signals are used as extraction clues, but noisy social tags such as `fyp`, `hkblog`, `hkliving`, generic foodie tags, and travel/blog hashtags are not saved as place tags.
+Saved-place tags are created, renamed, and deleted by the user from Place Detail. Tags use the
+user's own wording and are not a fixed taxonomy. The shared `place_tags` catalog stores the
+available tags, while `saved_places.user_tags` stores the tags assigned to each place. Renaming
+or deleting a catalog tag updates every saved place that uses it.
 
-The tag normalizer lives in `src/services/tags/placeTagNormalizer.ts`. It maps useful cuisine, vibe, and context clues into tags such as `coffee`, `bakery`, `ramen`, `late_night`, `self_service`, `date_spot`, and `work_friendly`. Home includes a tag filter row based on the curated tags currently present in saved places.
+Tags are the only user-facing place classification and filtering system. The Places screen shows
+compact filter chips only for tags assigned to at least one saved place. A selected tag and Status
+filter use AND logic. Generated provider categories remain internal import data and do not create
+filter membership. Legacy category-override and fixed-filter fields remain stored for backward
+compatibility but are no longer exposed or used for Places filtering.
+
+When a search result or manual place is saved, the app compares its known name, category,
+specialty, provider clues, and import clues with the user's tag catalog. It can assign only matching
+tags that the user has already created; when the catalog is empty, it assigns none.
 
 ## Supabase Setup
 
-Run the SQL in `supabase/migrations/001_create_saved_places.sql` in your Supabase SQL editor.
+Apply every file in `supabase/migrations` in filename order (or run `supabase db push`).
 
 The migration creates a `saved_places` table with:
 
 ```text
-id, name, address, area_or_city, category, cuisine_or_specialty, tags,
-notes, source_url, place_id, map_url, status, created_at, updated_at
+id, name, address, area_or_city, category, cuisine_or_specialty, tags, user_tags,
+notes, source_url, place_id, map_url, status, is_favorite, user_category_override, filter_overrides, created_at, updated_at
 ```
+
+Lifecycle status is one of `want_to_go`, `visited`, or `skipped`. `is_favorite` is an
+independent preference flag, so a place can be both Favorite and any lifecycle status.
+Generated `category` remains available to the import pipeline but does not drive user-facing
+filtering. `user_category_override` and `filter_overrides` are retained as legacy compatibility
+fields and are no longer exposed by the UI. Apply the historical migrations in filename order,
+including the editable tag-catalog migration, before releasing the tag-filtering client.
+
 
 The included row-level security policies allow anonymous CRUD access so the no-auth MVP can work from Expo Go. This is for development only. Before production, add authentication, add a `user_id` column, and replace the permissive policies with user-scoped policies.
 
@@ -196,5 +216,3 @@ By default the function uses `locationBias`, not `locationRestriction`, so Googl
 - Replace `src/services/placeExtraction/mockPlaceExtractionService.ts` with a real AI provider when extraction is ready. Keep that provider behind a backend function so API keys are not exposed in Expo.
 - Add Supabase auth and user-scoped saved-place policies before multi-user production testing.
 - Add auth only after the local save flow and database schema are stable.
-
-

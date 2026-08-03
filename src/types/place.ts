@@ -1,17 +1,19 @@
 import type {
   PlaceCandidate as SharedPlaceCandidate,
-  PlaceCandidateProvider as SharedPlaceCandidateProvider,
   PlaceCategory as SharedPlaceCategory
 } from '../../supabase/functions/_shared/placeSearchContract';
 import type { PlaceExtractionResult } from './extraction';
 
 export type PlaceCategory = SharedPlaceCategory;
-
-export type PlaceStatus = 'want_to_go' | 'visited' | 'favorite' | 'skip';
-
-export type PlaceCandidateProvider = SharedPlaceCandidateProvider;
-
+export type PlaceStatus = 'want_to_go' | 'visited' | 'skipped';
 export type PlaceCandidate = SharedPlaceCandidate;
+
+export type PlaceTag = {
+  id: string;
+  name: string;
+  createdAt: string;
+  updatedAt: string;
+};
 
 export type PlaceCard = {
   id: string;
@@ -26,6 +28,7 @@ export type PlaceCard = {
   mapUrl?: string;
   placeId?: string;
   status: PlaceStatus;
+  isFavorite: boolean;
   createdAt: string;
   updatedAt: string;
 };
@@ -34,9 +37,4 @@ export type DraftPlaceEntry = {
   sourceInstagramUrl: string;
   suggestedPlaceName: string;
   extraction?: PlaceExtractionResult;
-  notes?: string;
-  captionText?: string;
-  sharedText?: string;
-  userHint?: string;
-  screenshotUri?: string;
 };

@@ -7,6 +7,7 @@
     "start": "expo start",
     "android": "expo start --android",
     "ios": "expo start --ios",
+    "test": "tsx --test tests/regression.test.ts tests/favorite-lifecycle.test.ts tests/tag-filtering.test.ts tests/user-tags.test.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -20,6 +21,7 @@
   },
   "devDependencies": {
     "@types/react": "~19.1.10",
+    "tsx": "4.23.4",
     "typescript": "~5.9.2"
   }
 }

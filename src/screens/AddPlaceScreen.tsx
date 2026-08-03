@@ -105,7 +105,6 @@ export function AddPlaceScreen({ navigation }: AddPlaceScreenProps) {
     cuisineOrSpecialty: null,
     recommendedItems: [],
     vibeTags: ['manual-search'],
-    visibleClues: ['Manual search query was provided by the user.'],
     searchQuery: manualPlaceName.trim(),
     searchCandidates: manualPlaceName.trim()
       ? [
@@ -119,9 +118,7 @@ export function AddPlaceScreen({ navigation }: AddPlaceScreenProps) {
         ]
       : [],
     geoContext: getDefaultGeoContext(),
-    confidence: manualPlaceName.trim() ? 1 : 0,
-    needsUserConfirmation: true,
-    missingFields: manualPlaceName.trim() ? [] : ['placeName']
+    confidence: manualPlaceName.trim() ? 1 : 0
   });
 
   const handleFindPlace = async () => {
@@ -145,7 +142,6 @@ export function AddPlaceScreen({ navigation }: AddPlaceScreenProps) {
         });
 
         extraction = await placeExtractionService.extractPlace({
-          sourceUrl: sourceInstagramUrl.trim(),
           instagramImport,
           userHint
         });
@@ -297,4 +293,3 @@ const styles = StyleSheet.create({
     lineHeight: 20
   }
 });
-

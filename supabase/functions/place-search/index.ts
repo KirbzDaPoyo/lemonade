@@ -2,11 +2,11 @@ import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
 import type {
   GeoContext,
   PlaceCandidate,
-  PlaceCategory,
   PlaceSearchCandidate,
   PlaceSearchFunctionResponse,
   PlaceSearchRequest as SharedPlaceSearchRequest
 } from '../_shared/placeSearchContract.ts';
+import { getRecognizedGooglePlaceCategory } from '../_shared/google-place-category.ts';
 
 type SearchCandidateInput = Pick<PlaceSearchCandidate, 'query'> &
   Partial<Omit<PlaceSearchCandidate, 'query'>>;
@@ -43,20 +43,6 @@ const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Headers': 'authorization, x-client-info, apikey, content-type',
   'Access-Control-Allow-Methods': 'POST, OPTIONS'
-};
-
-const categoryByPrimaryType: Record<string, PlaceCategory> = {
-  bakery: 'dessert',
-  bar: 'bar',
-  cafe: 'cafe',
-  coffee_shop: 'cafe',
-  dessert_restaurant: 'dessert',
-  food_court: 'market',
-  ice_cream_shop: 'dessert',
-  market: 'market',
-  night_market: 'market',
-  restaurant: 'restaurant',
-  thai_restaurant: 'restaurant'
 };
 
 const defaultGeoContext: GeoContext = {
@@ -211,17 +197,6 @@ const getSearchCandidates = (input: PlaceSearchRequest, geoContext: GeoContext) 
       : [];
   const normalized = rawCandidates.map((candidate) => normalizeSearchCandidate(candidate, geoContext));
   const accepted = normalized.filter((candidate) => !isWeakQuery(candidate));
-  const rejected = normalized.filter(isWeakQuery).map((candidate) => candidate.query);
-
-  console.log('place-search candidates', JSON.stringify({
-    accepted: accepted.map((candidate) => ({
-      query: candidate.query,
-      reason: candidate.reason,
-      confidence: candidate.confidence,
-      sourceSignal: candidate.sourceSignal
-    })),
-    rejectedWeakQueries: rejected
-  }));
 
   return unique(accepted, (candidate) => candidate.query).slice(0, 7);
 };
@@ -239,14 +214,6 @@ const deriveAreaOrCity = (place: GooglePlace) =>
 
 const getCountryCode = (place: GooglePlace) =>
   place.addressComponents?.find((component) => component.types?.includes('country'))?.shortText;
-
-const mapCategory = (primaryType?: string): PlaceCategory => {
-  if (!primaryType) {
-    return 'other';
-  }
-
-  return categoryByPrimaryType[primaryType] ?? 'other';
-};
 
 const tokenHits = (needle: string | undefined, haystack: string) => {
   if (!needle) {
@@ -289,6 +256,7 @@ const scorePlace = (
 
 function mapPlace(place: GooglePlace): PlaceCandidate {
   const primaryType = place.primaryType;
+  const providerCategory = getRecognizedGooglePlaceCategory(primaryType, place.types);
   const areaCity = deriveAreaOrCity(place);
 
   return {
@@ -297,13 +265,14 @@ function mapPlace(place: GooglePlace): PlaceCandidate {
     name: place.displayName?.text ?? 'Unnamed place',
     address: place.formattedAddress ?? 'Address to confirm',
     areaCity,
-    category: mapCategory(primaryType),
+    category: providerCategory ?? 'other',
     cuisineOrSpecialty: primaryType?.replaceAll('_', ' '),
     tags: compact([primaryType?.replaceAll('_', '-')]),
     mapUrl: place.googleMapsUri,
     latitude: place.location?.latitude,
     longitude: place.location?.longitude,
     primaryType,
+    providerCategoryRecognized: Boolean(providerCategory),
     userRatingCount: place.userRatingCount,
     rating: place.rating
   };

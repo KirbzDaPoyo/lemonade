@@ -5,45 +5,42 @@ import { AppButton } from '../components/AppButton';
 import { FilterBar } from '../components/FilterBar';
 import { PlaceCardRow } from '../components/PlaceCardRow';
 import { StorageErrorBanner } from '../components/storage-error-banner';
+import { TagFilterBar } from '../components/tag-filter-bar';
 import { AppNavigation } from '../navigation/types';
-import { findPlaceFilterOption, getPlaceFilterOptions, PlaceFilterKey } from '../services/placeFilters';
+import {
+  getAssignedTagFilterOptions,
+  matchesPlacesScreenFilters
+} from '../services/placeFilters';
 import { usePlaces } from '../store/PlacesContext';
 import { colors, spacing } from '../theme';
-import { PlaceStatus } from '../types/place';
+import type { PlaceStatusFilter } from '../types/filters';
 
 type HomeScreenProps = {
   navigation: AppNavigation;
 };
 
 export function HomeScreen({ navigation }: HomeScreenProps) {
-  const { isLoading, isStorageAvailable, places, storageError } = usePlaces();
-  const [selectedStatus, setSelectedStatus] = useState<PlaceStatus | 'all'>('all');
-  const [selectedPlaceFilter, setSelectedPlaceFilter] = useState<PlaceFilterKey>('all');
-
-  const placeFilterOptions = useMemo(() => getPlaceFilterOptions(places), [places]);
-  const activePlaceFilter = placeFilterOptions.some(
-    (option) => option.key === selectedPlaceFilter
-  )
-    ? selectedPlaceFilter
-    : 'all';
+  const { availableTags, isLoading, isStorageAvailable, places, storageError } = usePlaces();
+  const [selectedStatus, setSelectedStatus] = useState<PlaceStatusFilter>('all');
+  const [selectedTagId, setSelectedTagId] = useState<string | null>(null);
+  const tagFilterOptions = useMemo(
+    () => getAssignedTagFilterOptions(places, availableTags),
+    [availableTags, places]
+  );
+  const selectedTag = tagFilterOptions.find((tag) => tag.id === selectedTagId) ?? null;
 
   useEffect(() => {
-    if (activePlaceFilter !== selectedPlaceFilter) {
-      setSelectedPlaceFilter(activePlaceFilter);
+    if (selectedTagId !== null && selectedTag === null) {
+      setSelectedTagId(null);
     }
-  }, [activePlaceFilter, selectedPlaceFilter]);
+  }, [selectedTag, selectedTagId]);
 
   const filteredPlaces = useMemo(
     () =>
-      places.filter((place) => {
-        const matchesStatus =
-          selectedStatus === 'all' || place.status === selectedStatus;
-        const placeFilter = findPlaceFilterOption(placeFilterOptions, activePlaceFilter);
-        const matchesPlaceFilter = placeFilter.matchesPlace(place);
-
-        return matchesStatus && matchesPlaceFilter;
-      }),
-    [activePlaceFilter, placeFilterOptions, places, selectedStatus]
+      places.filter((place) =>
+        matchesPlacesScreenFilters(place, selectedStatus, selectedTag?.name ?? null)
+      ),
+    [places, selectedStatus, selectedTag?.name]
   );
 
   return (
@@ -61,12 +58,11 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
         />
       </View>
 
-      <FilterBar
-        selectedStatus={selectedStatus}
-        selectedPlaceFilter={activePlaceFilter}
-        placeFilterOptions={placeFilterOptions}
-        onStatusChange={setSelectedStatus}
-        onPlaceFilterChange={setSelectedPlaceFilter}
+      <FilterBar selectedStatus={selectedStatus} onStatusChange={setSelectedStatus} />
+      <TagFilterBar
+        tags={tagFilterOptions}
+        selectedTagId={selectedTag?.id ?? null}
+        onTagChange={setSelectedTagId}
       />
 
       {storageError ? <StorageErrorBanner message={storageError} /> : null}
@@ -84,7 +80,7 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
           ListEmptyComponent={
             <View style={styles.emptyState}>
               <Text style={styles.emptyTitle}>No places match these filters.</Text>
-              <Text style={styles.emptyBody}>Add a reel URL or loosen the filters.</Text>
+              <Text style={styles.emptyBody}>Choose another tag or loosen the status filter.</Text>
             </View>
           }
           renderItem={({ item }) => (

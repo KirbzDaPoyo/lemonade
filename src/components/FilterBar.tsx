@@ -1,109 +1,52 @@
 import { useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { PlaceFilterKey, PlaceFilterOption } from '../services/placeFilters';
 import { colors, radii, spacing } from '../theme';
-import { PlaceStatus } from '../types/place';
-import { statusLabels } from '../utils/labels';
+import type { PlaceStatusFilter } from '../types/filters';
+import { favoriteLabel, statusLabels } from '../utils/labels';
 
 type FilterBarProps = {
-  selectedStatus: PlaceStatus | 'all';
-  selectedPlaceFilter: PlaceFilterKey;
-  placeFilterOptions: PlaceFilterOption[];
-  onStatusChange: (status: PlaceStatus | 'all') => void;
-  onPlaceFilterChange: (filter: PlaceFilterKey) => void;
+  selectedStatus: PlaceStatusFilter;
+  onStatusChange: (status: PlaceStatusFilter) => void;
 };
 
-type DropdownOption<T extends string> = {
-  value: T;
-  label: string;
-};
-
-const statusOptions: Array<DropdownOption<PlaceStatus | 'all'>> = [
-  { value: 'all', label: 'All status' },
+const statusOptions: Array<{ value: PlaceStatusFilter; label: string }> = [
+  { value: 'all', label: 'All statuses' },
   { value: 'want_to_go', label: statusLabels.want_to_go },
   { value: 'visited', label: statusLabels.visited },
-  { value: 'favorite', label: statusLabels.favorite },
-  { value: 'skip', label: statusLabels.skip }
+  { value: 'favorite', label: favoriteLabel },
+  { value: 'skipped', label: statusLabels.skipped }
 ];
 
-export function FilterBar({
-  selectedStatus,
-  selectedPlaceFilter,
-  placeFilterOptions,
-  onStatusChange,
-  onPlaceFilterChange
-}: FilterBarProps) {
-  const [openMenu, setOpenMenu] = useState<'status' | 'place' | null>(null);
-  const placeOptions = placeFilterOptions.map((filter) => ({
-    value: filter.key,
-    label: filter.label
-  }));
+export function FilterBar({ selectedStatus, onStatusChange }: FilterBarProps) {
+  const [isOpen, setIsOpen] = useState(false);
+  const selectedLabel =
+    statusOptions.find((option) => option.value === selectedStatus)?.label ?? 'Status';
 
-  return (
-    <View style={styles.container}>
-      <Dropdown
-        label="Status"
-        open={openMenu === 'status'}
-        options={statusOptions}
-        selectedValue={selectedStatus}
-        onToggle={() => setOpenMenu((current) => (current === 'status' ? null : 'status'))}
-        onSelect={(status) => {
-          onStatusChange(status);
-          setOpenMenu(null);
-        }}
-      />
-      <Dropdown
-        label="Place"
-        open={openMenu === 'place'}
-        options={placeOptions}
-        selectedValue={selectedPlaceFilter}
-        onToggle={() => setOpenMenu((current) => (current === 'place' ? null : 'place'))}
-        onSelect={(filter) => {
-          onPlaceFilterChange(filter);
-          setOpenMenu(null);
-        }}
-      />
-    </View>
-  );
-}
-
-function Dropdown<T extends string>({
-  label,
-  open,
-  options,
-  selectedValue,
-  onToggle,
-  onSelect
-}: {
-  label: string;
-  open: boolean;
-  options: Array<DropdownOption<T>>;
-  selectedValue: T;
-  onToggle: () => void;
-  onSelect: (value: T) => void;
-}) {
-  const selectedLabel = options.find((option) => option.value === selectedValue)?.label ?? label;
+  const selectStatus = (status: PlaceStatusFilter) => {
+    onStatusChange(status);
+    setIsOpen(false);
+  };
 
   return (
     <View style={styles.dropdown}>
-      <Text style={styles.dropdownLabel}>{label}</Text>
+      <Text style={styles.dropdownLabel}>Status</Text>
       <Pressable
-        accessibilityLabel={`${label}: ${selectedLabel}`}
+        accessibilityLabel={`Status: ${selectedLabel}`}
         accessibilityRole="button"
-        accessibilityState={{ expanded: open }}
-        onPress={onToggle}
+        accessibilityState={{ expanded: isOpen }}
+        onPress={() => setIsOpen((current) => !current)}
         style={({ pressed }) => [styles.dropdownButton, pressed && styles.pressed]}
       >
         <Text numberOfLines={1} style={styles.dropdownValue}>
           {selectedLabel}
         </Text>
-        <Text style={styles.chevron}>{open ? '^' : 'v'}</Text>
+        <Text style={styles.chevron}>{isOpen ? '^' : 'v'}</Text>
       </Pressable>
-      {open ? (
+      {isOpen ? (
         <View style={styles.menu}>
-          {options.map((option) => {
-            const selected = option.value === selectedValue;
+          {statusOptions.map((option) => {
+            const selected = option.value === selectedStatus;
 
             return (
               <Pressable
@@ -111,7 +54,7 @@ function Dropdown<T extends string>({
                 accessibilityRole="button"
                 accessibilityState={{ selected }}
                 key={option.value}
-                onPress={() => onSelect(option.value)}
+                onPress={() => selectStatus(option.value)}
                 style={({ pressed }) => [
                   styles.menuItem,
                   selected && styles.selectedMenuItem,
@@ -131,9 +74,6 @@ function Dropdown<T extends string>({
 }
 
 const styles = StyleSheet.create({
-  container: {
-    gap: spacing.md
-  },
   dropdown: {
     gap: spacing.xs
   },
@@ -177,8 +117,8 @@ const styles = StyleSheet.create({
   menuItem: {
     borderBottomColor: colors.border,
     borderBottomWidth: 1,
-    minHeight: 42,
     justifyContent: 'center',
+    minHeight: 42,
     paddingHorizontal: spacing.md,
     paddingVertical: spacing.sm
   },

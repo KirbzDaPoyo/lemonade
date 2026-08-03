@@ -1,5 +1,3 @@
-import { PlaceCard } from '../../types/place';
-
 export const normalizeInstagramSourceUrl = (value: string) => {
   const trimmedValue = value.trim();
 
@@ -20,14 +18,4 @@ export const normalizeInstagramSourceUrl = (value: string) => {
   }
 
   return trimmedValue;
-};
-
-export const findDuplicateSavedPlace = (places: PlaceCard[], candidate: PlaceCard) => {
-  const normalizedSourceUrl = normalizeInstagramSourceUrl(candidate.sourceInstagramUrl);
-
-  return places.find(
-    (place) =>
-      (candidate.placeId !== undefined && place.placeId === candidate.placeId) ||
-      normalizeInstagramSourceUrl(place.sourceInstagramUrl) === normalizedSourceUrl
-  );
 };
