@@ -5,14 +5,22 @@
   "main": "index.ts",
   "scripts": {
     "start": "expo start",
-    "android": "expo start --android",
-    "ios": "expo start --ios",
-    "test": "tsx --test tests/regression.test.ts tests/favorite-lifecycle.test.ts tests/tag-filtering.test.ts tests/user-tags.test.ts",
+    "start:go": "expo start --go",
+    "android": "expo run:android",
+    "ios": "expo run:ios",
+    "postinstall": "patch-package",
+    "test": "tsx --test tests/regression.test.ts tests/favorite-lifecycle.test.ts tests/tag-filtering.test.ts tests/user-tags.test.ts tests/incoming-share.test.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
     "@supabase/supabase-js": "^2.110.0",
-    "expo": "^54.0.35",
+    "expo": "~54.0.36",
+    "expo-asset": "~12.0.13",
+    "expo-constants": "~18.0.13",
+    "expo-dev-client": "~6.0.21",
+    "expo-keep-awake": "~15.0.8",
+    "expo-linking": "~8.0.12",
+    "expo-share-intent": "5.1.1",
     "expo-status-bar": "~3.0.9",
     "react": "19.1.0",
     "react-native": "0.81.5",
@@ -21,6 +29,7 @@
   },
   "devDependencies": {
     "@types/react": "~19.1.10",
+    "patch-package": "^8.0.1",
     "tsx": "4.23.4",
     "typescript": "~5.9.2"
   }

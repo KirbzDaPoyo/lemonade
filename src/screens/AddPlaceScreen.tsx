@@ -1,4 +1,4 @@
-import { useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ActivityIndicator,
   Alert,
@@ -15,6 +15,7 @@ import { AppButton } from '../components/AppButton';
 import { ScreenHeader } from '../components/screen-header';
 import { getDefaultGeoContext } from '../config/geoContext';
 import { AppNavigation } from '../navigation/types';
+import { extractInstagramUrl } from '../services/incomingShare/instagramUrl';
 import { instagramImportProvider } from '../services/instagramImport';
 import { placeExtractionService } from '../services/placeExtraction';
 import { placeSearchService } from '../services/placeSearch';
@@ -23,6 +24,8 @@ import { PlaceExtractionResult, PlaceSearchCandidate } from '../types/extraction
 
 type AddPlaceScreenProps = {
   navigation: AppNavigation;
+  initialInstagramUrl?: string;
+  autoStart?: boolean;
 };
 
 const isInstagramUrl = (value: string) => {
@@ -66,11 +69,18 @@ const prioritizeManualSearch = (
   ];
 };
 
-export function AddPlaceScreen({ navigation }: AddPlaceScreenProps) {
-  const [sourceInstagramUrl, setSourceInstagramUrl] = useState('');
+export function AddPlaceScreen({
+  navigation,
+  initialInstagramUrl,
+  autoStart = false
+}: AddPlaceScreenProps) {
+  const [sourceInstagramUrl, setSourceInstagramUrl] = useState(
+    initialInstagramUrl ?? ''
+  );
   const [manualPlaceName, setManualPlaceName] = useState('');
   const [isFindingPlace, setIsFindingPlace] = useState(false);
   const [needsManualQuery, setNeedsManualQuery] = useState(false);
+  const didAutoStartRef = useRef(false);
 
   const canSearch =
     sourceInstagramUrl.trim().length > 0 &&
@@ -79,7 +89,8 @@ export function AddPlaceScreen({ navigation }: AddPlaceScreenProps) {
 
   const navigateToCandidates = async (
     extraction: PlaceExtractionResult,
-    searchQuery: string
+    searchQuery: string,
+    instagramUrl: string
   ) => {
     const candidates = await placeSearchService.searchPlaces({
       query: searchQuery,
@@ -90,7 +101,7 @@ export function AddPlaceScreen({ navigation }: AddPlaceScreenProps) {
     navigation.navigate({
       name: 'CandidateMatch',
       draft: {
-        sourceInstagramUrl: sourceInstagramUrl.trim(),
+        sourceInstagramUrl: instagramUrl,
         suggestedPlaceName: extraction.placeName ?? searchQuery,
         extraction
       },
@@ -121,8 +132,10 @@ export function AddPlaceScreen({ navigation }: AddPlaceScreenProps) {
     confidence: manualPlaceName.trim() ? 1 : 0
   });
 
-  const handleFindPlace = async () => {
-    if (!isInstagramUrl(sourceInstagramUrl)) {
+  const handleFindPlace = async (requestedUrl = sourceInstagramUrl) => {
+    const instagramUrl = extractInstagramUrl(requestedUrl);
+
+    if (!instagramUrl || !isInstagramUrl(instagramUrl)) {
       Alert.alert(
         'Check the Instagram URL',
         'Paste a public Instagram post or reel URL, such as https://www.instagram.com/reel/...'
@@ -130,6 +143,7 @@ export function AddPlaceScreen({ navigation }: AddPlaceScreenProps) {
       return;
     }
 
+    setSourceInstagramUrl(instagramUrl);
     setIsFindingPlace(true);
 
     try {
@@ -138,7 +152,7 @@ export function AddPlaceScreen({ navigation }: AddPlaceScreenProps) {
 
       try {
         const instagramImport = await instagramImportProvider.importUrl({
-          url: sourceInstagramUrl.trim()
+          url: instagramUrl
         });
 
         extraction = await placeExtractionService.extractPlace({
@@ -156,7 +170,11 @@ export function AddPlaceScreen({ navigation }: AddPlaceScreenProps) {
             'Instagram import failed',
             `${message} Searching with your place name instead.`
           );
-          await navigateToCandidates(buildManualExtraction(), manualPlaceName.trim());
+          await navigateToCandidates(
+            buildManualExtraction(),
+            manualPlaceName.trim(),
+            instagramUrl
+          );
         } else {
           Alert.alert(
             'Instagram import failed',
@@ -178,7 +196,7 @@ export function AddPlaceScreen({ navigation }: AddPlaceScreenProps) {
         return;
       }
 
-      await navigateToCandidates(extraction, searchQuery);
+      await navigateToCandidates(extraction, searchQuery, instagramUrl);
     } catch (error) {
       const message =
         error instanceof Error
@@ -195,6 +213,15 @@ export function AddPlaceScreen({ navigation }: AddPlaceScreenProps) {
       setIsFindingPlace(false);
     }
   };
+
+  useEffect(() => {
+    if (!autoStart || !initialInstagramUrl || didAutoStartRef.current) {
+      return;
+    }
+
+    didAutoStartRef.current = true;
+    void handleFindPlace(initialInstagramUrl);
+  }, [autoStart, initialInstagramUrl]);
 
   return (
     <KeyboardAvoidingView
@@ -242,7 +269,7 @@ export function AddPlaceScreen({ navigation }: AddPlaceScreenProps) {
         <AppButton
           disabled={!canSearch}
           label={isFindingPlace ? 'Finding the place...' : 'Find the Place'}
-          onPress={handleFindPlace}
+          onPress={() => void handleFindPlace()}
         />
         {isFindingPlace ? <ActivityIndicator color={colors.primary} /> : null}
       </ScrollView>

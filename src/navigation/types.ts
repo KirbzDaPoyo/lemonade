@@ -2,7 +2,12 @@ import { DraftPlaceEntry, PlaceCandidate } from '../types/place';
 
 export type AppRoute =
   | { name: 'Home' }
-  | { name: 'AddPlace' }
+  | {
+      name: 'AddPlace';
+      initialInstagramUrl?: string;
+      autoStart?: boolean;
+      shareRequestId?: number;
+    }
   | {
       name: 'CandidateMatch';
       draft: DraftPlaceEntry;
