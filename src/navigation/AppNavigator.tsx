@@ -49,7 +49,6 @@ export function AppNavigator() {
       {
         name: 'AddPlace',
         initialInstagramUrl: instagramUrl,
-        autoStart: true,
         shareRequestId: shareSequenceRef.current
       }
     ]);
@@ -80,7 +79,6 @@ export function AppNavigator() {
   if (currentRoute.name === 'AddPlace') {
     return (
       <AddPlaceScreen
-        autoStart={currentRoute.autoStart}
         initialInstagramUrl={currentRoute.initialInstagramUrl}
         key={currentRoute.shareRequestId ?? 'manual-add-place'}
         navigation={navigation}

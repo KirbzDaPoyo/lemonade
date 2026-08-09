@@ -5,7 +5,6 @@ export type AppRoute =
   | {
       name: 'AddPlace';
       initialInstagramUrl?: string;
-      autoStart?: boolean;
       shareRequestId?: number;
     }
   | {

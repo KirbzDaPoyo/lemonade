@@ -25,7 +25,6 @@ import { PlaceExtractionResult, PlaceSearchCandidate } from '../types/extraction
 type AddPlaceScreenProps = {
   navigation: AppNavigation;
   initialInstagramUrl?: string;
-  autoStart?: boolean;
 };
 
 const isInstagramUrl = (value: string) => {
@@ -71,8 +70,7 @@ const prioritizeManualSearch = (
 
 export function AddPlaceScreen({
   navigation,
-  initialInstagramUrl,
-  autoStart = false
+  initialInstagramUrl
 }: AddPlaceScreenProps) {
   const [sourceInstagramUrl, setSourceInstagramUrl] = useState(
     initialInstagramUrl ?? ''
@@ -80,7 +78,15 @@ export function AddPlaceScreen({
   const [manualPlaceName, setManualPlaceName] = useState('');
   const [isFindingPlace, setIsFindingPlace] = useState(false);
   const [needsManualQuery, setNeedsManualQuery] = useState(false);
-  const didAutoStartRef = useRef(false);
+  const isMountedRef = useRef(true);
+
+  useEffect(() => {
+    isMountedRef.current = true;
+
+    return () => {
+      isMountedRef.current = false;
+    };
+  }, []);
 
   const canSearch =
     sourceInstagramUrl.trim().length > 0 &&
@@ -98,11 +104,14 @@ export function AddPlaceScreen({
       geoContext: extraction.geoContext
     });
 
+    if (!isMountedRef.current) {
+      return;
+    }
+
     navigation.navigate({
       name: 'CandidateMatch',
       draft: {
         sourceInstagramUrl: instagramUrl,
-        suggestedPlaceName: extraction.placeName ?? searchQuery,
         extraction
       },
       candidates
@@ -160,6 +169,10 @@ export function AddPlaceScreen({
           userHint
         });
       } catch (error) {
+        if (!isMountedRef.current) {
+          return;
+        }
+
         const message =
           error instanceof Error ? error.message : 'Instagram import failed.';
 
@@ -185,6 +198,10 @@ export function AddPlaceScreen({
         return;
       }
 
+      if (!isMountedRef.current) {
+        return;
+      }
+
       const searchQuery = getSearchQuery(extraction, manualPlaceName);
 
       if (!searchQuery) {
@@ -198,6 +215,10 @@ export function AddPlaceScreen({
 
       await navigateToCandidates(extraction, searchQuery, instagramUrl);
     } catch (error) {
+      if (!isMountedRef.current) {
+        return;
+      }
+
       const message =
         error instanceof Error
           ? error.message
@@ -210,18 +231,11 @@ export function AddPlaceScreen({
         Alert.alert('Add a search hint', `${message} What should we search?`);
       }
     } finally {
-      setIsFindingPlace(false);
+      if (isMountedRef.current) {
+        setIsFindingPlace(false);
+      }
     }
   };
-
-  useEffect(() => {
-    if (!autoStart || !initialInstagramUrl || didAutoStartRef.current) {
-      return;
-    }
-
-    didAutoStartRef.current = true;
-    void handleFindPlace(initialInstagramUrl);
-  }, [autoStart, initialInstagramUrl]);
 
   return (
     <KeyboardAvoidingView

@@ -1,4 +1,5 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 import { extractInstagramUrl } from '../src/services/incomingShare/instagramUrl';
@@ -38,4 +39,25 @@ test('rejects unsafe or unsupported Instagram-like URLs', () => {
     extractInstagramUrl('https://www.instagram.com/reel/abc/extra/'),
     null
   );
+});
+
+test('incoming shares prefill the URL without starting a search automatically', () => {
+  const navigatorSource = readFileSync('src/navigation/AppNavigator.tsx', 'utf8');
+  const addPlaceSource = readFileSync('src/screens/AddPlaceScreen.tsx', 'utf8');
+
+  assert.match(navigatorSource, /initialInstagramUrl: instagramUrl/);
+  assert.doesNotMatch(navigatorSource, /autoStart/);
+  assert.doesNotMatch(addPlaceSource, /handleFindPlace\(initialInstagramUrl\)/);
+});
+
+test('candidate selection does not offer incomplete manual saves', () => {
+  const candidateSource = readFileSync(
+    'src/screens/CandidateMatchScreen.tsx',
+    'utf8'
+  );
+
+  assert.doesNotMatch(candidateSource, /Save Manually/);
+  assert.doesNotMatch(candidateSource, /handleSaveManually/);
+  assert.doesNotMatch(candidateSource, /Draft from Instagram/);
+  assert.match(candidateSource, /handleSaveCandidate/);
 });

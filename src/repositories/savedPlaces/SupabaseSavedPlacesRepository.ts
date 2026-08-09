@@ -70,6 +70,14 @@ export const mapPlaceUpdateToRow = (updates: PlaceUpdate): Partial<SavedPlaceRow
 const toSupabaseError = (action: string, message?: string) =>
   new Error(`Supabase saved places ${action} failed${message ? `: ${message}` : '.'}`);
 
+export const shouldReplaceIncompleteManualPlace = (
+  existingPlace: PlaceCard,
+  replacement: NewPlace
+) =>
+  !existingPlace.placeId &&
+  existingPlace.address === 'Address to confirm' &&
+  Boolean(replacement.placeId);
+
 export class SupabaseSavedPlacesRepository implements SavedPlacesRepository {
   constructor(private readonly supabase: SupabaseClient) {}
 
@@ -175,6 +183,20 @@ export class SupabaseSavedPlacesRepository implements SavedPlacesRepository {
     const existingPlace = await this.findExistingPlace(place);
 
     if (existingPlace) {
+      if (shouldReplaceIncompleteManualPlace(existingPlace, place)) {
+        return this.updatePlace(existingPlace.id, {
+          placeName: place.placeName,
+          address: place.address,
+          areaCity: place.areaCity,
+          category: place.category,
+          cuisineOrSpecialty: place.cuisineOrSpecialty,
+          tags: place.tags,
+          sourceInstagramUrl: place.sourceInstagramUrl,
+          placeId: place.placeId,
+          mapUrl: place.mapUrl
+        });
+      }
+
       return existingPlace;
     }
 

@@ -7,7 +7,8 @@ import type { SavedPlaceRow } from '../src/lib/supabaseClient';
 import {
   mapPlaceToRow,
   mapPlaceUpdateToRow,
-  mapRowToPlace
+  mapRowToPlace,
+  shouldReplaceIncompleteManualPlace
 } from '../src/repositories/savedPlaces/SupabaseSavedPlacesRepository';
 import { matchesStatusFilter } from '../src/services/placeFilters';
 import type { PlaceCard } from '../src/types/place';
@@ -89,6 +90,32 @@ test('Supabase insert and update mapping write Favorite separately', () => {
     status: 'skipped',
     is_favorite: false
   });
+});
+
+test('a real candidate can replace a legacy incomplete manual save', () => {
+  const existingPlace = placeCard({
+    address: 'Address to confirm',
+    placeId: undefined,
+    placeName: 'Hung Hom'
+  });
+  const { createdAt: _createdAt, updatedAt: _updatedAt, ...replacement } =
+    placeCard({
+      id: 'replacement-id',
+      placeId: 'mai-hei-provider-id',
+      placeName: 'Mai Hei'
+    });
+
+  assert.equal(
+    shouldReplaceIncompleteManualPlace(existingPlace, replacement),
+    true
+  );
+  assert.equal(
+    shouldReplaceIncompleteManualPlace(
+      { ...existingPlace, address: 'Verified address' },
+      replacement
+    ),
+    false
+  );
 });
 
 test('Favorite migration preserves preference before assigning a lifecycle fallback', () => {

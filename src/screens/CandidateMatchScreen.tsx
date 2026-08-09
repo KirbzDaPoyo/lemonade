@@ -1,14 +1,10 @@
 import { useRef, useState } from 'react';
 import { Alert, FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { AppButton } from '../components/AppButton';
 import { ScreenHeader } from '../components/screen-header';
 import { AppNavigation } from '../navigation/types';
 import type { PlaceInput } from '../repositories/savedPlaces/types';
-import {
-  resolveCandidatePlaceCategory,
-  resolveManualPlaceCategory
-} from '../services/classification/place-category-resolver';
+import { resolveCandidatePlaceCategory } from '../services/classification/place-category-resolver';
 import { suggestUserTags } from '../services/tags/user-tags';
 import { usePlaces } from '../store/PlacesContext';
 import { colors, radii, spacing } from '../theme';
@@ -107,61 +103,9 @@ export function CandidateMatchScreen({
     );
   };
 
-  const handleSaveManually = async () => {
-    const placeName = extraction?.placeName || draft.suggestedPlaceName;
-    const category = resolveManualPlaceCategory(placeName, extraction);
-    const cuisineOrSpecialty = extraction?.cuisineOrSpecialty || undefined;
-    const suggestedTags = suggestUserTags(availableTagNames, [
-      placeName,
-      category,
-      cuisineOrSpecialty,
-      ...sharedTagClues
-    ]);
-
-    await savePlace(
-      'manual',
-      {
-        placeName,
-        address: 'Address to confirm',
-        areaCity: extraction?.areaOrCity || 'Area to confirm',
-        category,
-        cuisineOrSpecialty,
-        tags: suggestedTags
-      },
-      'The manual place could not be saved.'
-    );
-  };
-
   return (
     <View style={styles.screen}>
       <ScreenHeader onBack={navigation.goBack} title="Match Place" />
-
-      <View style={styles.draftBox}>
-        <Text style={styles.draftLabel}>Draft from Instagram</Text>
-        <Text style={styles.draftTitle}>{draft.suggestedPlaceName}</Text>
-        <Text numberOfLines={2} style={styles.draftUrl}>
-          {draft.sourceInstagramUrl}
-        </Text>
-        {draft.extraction ? (
-          <View style={styles.extractionSummary}>
-            <Text style={styles.extractionSummaryText}>
-              {draft.extraction.category
-                ? categoryLabels[draft.extraction.category]
-                : 'Place'} - {draft.extraction.areaOrCity || 'Area to confirm'}
-            </Text>
-            <Text style={styles.extractionSummaryText}>
-              {draft.extraction.cuisineOrSpecialty || 'Specialty to confirm'}
-            </Text>
-          </View>
-        ) : null}
-      </View>
-
-      <AppButton
-        disabled={Boolean(savingKey)}
-        label={savingKey === 'manual' ? 'Saving...' : 'Save Manually'}
-        onPress={handleSaveManually}
-        variant="secondary"
-      />
 
       <FlatList
         contentContainerStyle={styles.listContent}
@@ -170,7 +114,9 @@ export function CandidateMatchScreen({
         ListEmptyComponent={
           <View style={styles.emptyState}>
             <Text style={styles.emptyTitle}>No candidates found.</Text>
-            <Text style={styles.emptyBody}>Save manually or go back and adjust the place name.</Text>
+            <Text style={styles.emptyBody}>
+              Go back, adjust the place name, and search again.
+            </Text>
           </View>
         }
         renderItem={({ item }) => (
@@ -238,39 +184,6 @@ const styles = StyleSheet.create({
     flex: 1,
     gap: spacing.lg,
     padding: spacing.lg
-  },
-  draftBox: {
-    backgroundColor: colors.surfaceMuted,
-    borderRadius: radii.md,
-    gap: spacing.xs,
-    padding: spacing.lg
-  },
-  draftLabel: {
-    color: colors.muted,
-    fontSize: 12,
-    fontWeight: '800',
-    textTransform: 'uppercase'
-  },
-  draftTitle: {
-    color: colors.text,
-    fontSize: 20,
-    fontWeight: '900'
-  },
-  draftUrl: {
-    color: colors.muted,
-    fontSize: 13
-  },
-  extractionSummary: {
-    borderTopColor: colors.border,
-    borderTopWidth: 1,
-    gap: spacing.xs,
-    marginTop: spacing.sm,
-    paddingTop: spacing.sm
-  },
-  extractionSummaryText: {
-    color: colors.text,
-    fontSize: 13,
-    fontWeight: '700'
   },
   listContent: {
     gap: spacing.md,

@@ -39,9 +39,3 @@ export const resolveCandidatePlaceCategory = (
 
   return getConfidentInferredCategory(extraction) ?? 'other';
 };
-
-export const resolveManualPlaceCategory = (
-  placeName: string,
-  extraction?: PlaceExtractionResult
-): PlaceCategory =>
-  extraction?.category ?? inferPlaceCategoryFromText(placeName) ?? 'other';
