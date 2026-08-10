@@ -2,10 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { getRecognizedGooglePlaceCategory } from '../supabase/functions/_shared/google-place-category';
-import {
-  resolveCandidatePlaceCategory,
-  resolveManualPlaceCategory
-} from '../src/services/classification/place-category-resolver';
+import { resolveCandidatePlaceCategory } from '../src/services/classification/place-category-resolver';
 import type { PlaceExtractionResult } from '../src/types/extraction';
 import type { PlaceCandidate } from '../src/types/place';
 
@@ -94,17 +91,5 @@ test('unresolved provider category ignores low-confidence inference', () => {
       extraction('restaurant', 0.4)
     ),
     'other'
-  );
-});
-
-test('manual save infers a controlled category from the place name', () => {
-  assert.equal(resolveManualPlaceCategory('Lemon House Cafe'), 'cafe');
-  assert.equal(resolveManualPlaceCategory('Canal Night Market'), 'market');
-});
-
-test('manual save preserves an extracted category before name inference', () => {
-  assert.equal(
-    resolveManualPlaceCategory('Lemon House Cafe', extraction('restaurant', 0.8)),
-    'restaurant'
   );
 });

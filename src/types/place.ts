@@ -35,6 +35,5 @@ export type PlaceCard = {
 
 export type DraftPlaceEntry = {
   sourceInstagramUrl: string;
-  suggestedPlaceName: string;
   extraction?: PlaceExtractionResult;
 };

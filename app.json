@@ -7,6 +7,22 @@
     "userInterfaceStyle": "light",
     "newArchEnabled": true,
     "scheme": "project-lemonade",
+    "plugins": [
+      [
+        "expo-share-intent",
+        {
+          "iosActivationRules": {
+            "NSExtensionActivationSupportsText": true,
+            "NSExtensionActivationSupportsWebURLWithMaxCount": 1,
+            "NSExtensionActivationSupportsWebPageWithMaxCount": 1
+          },
+          "androidIntentFilters": [
+            "text/plain"
+          ]
+        }
+      ],
+      "expo-asset"
+    ],
     "assetBundlePatterns": [
       "**/*"
     ],
@@ -19,6 +35,11 @@
     },
     "web": {
       "bundler": "metro"
+    },
+    "extra": {
+      "eas": {
+        "projectId": "d6fa64ff-1623-4776-b302-9ccde3aae84d"
+      }
     }
   }
 }
