@@ -11,6 +11,11 @@
     },
     "production": {
       "autoIncrement": true
+    },
+    "preview": {
+      "autoIncrement": true,
+      "distribution": "internal",
+      "environment": "preview"
     }
   },
   "submit": {
