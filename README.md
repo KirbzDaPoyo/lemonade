@@ -1,24 +1,53 @@
 # Project Lemonade
 
-An MVP Expo app for saving cafes, restaurants, and vendors discovered from Instagram reels or posts.
+Project Lemonade is an Expo app for saving cafes, restaurants, and other places discovered through Instagram posts and reels.
 
-The MVP is intentionally based on user-initiated sharing or pasting. By default, the mobile client sends each submitted public Instagram URL to a Supabase Edge Function, which uses Apify's `apify/instagram-scraper` Actor to retrieve place metadata. The app does not import Saved posts, read DMs, call Instagram APIs directly, or download and rehost videos.
+Share an Instagram link to the Android app or paste one manually. Lemonade imports public post metadata, proposes matching real-world places, and lets the signed-in user save the correct result to a private Supabase-backed collection.
 
-## What is included
+> Project status: functional pre-release MVP. The main workflows and account isolation are working; visual design and customization are the next development phase.
 
-- Saved Places list with status and user-tag filters
-- Add Place screen for an Instagram URL with a manual search fallback
-- Mock extraction service for AI-ready Instagram metadata parsing without calling a real AI API
-- Mock place-search service that returns candidate matches
-- Instagram metadata import through Apify by default, called only from a Supabase Edge Function
-- Candidate confirmation flow
-- Place Detail screen with source URL, map URL, tags, editable notes, and status updates
-- Independent lifecycle status and Favorite preference controls
-- Supabase-backed cloud persistence for saved places
-- Visible configuration errors when cloud storage is unavailable
-- TypeScript domain models and service interfaces designed for a future Google Places or Supabase integration
+## Current Features
 
-## Setup
+- Email-based accounts and session persistence through Clerk
+- Private, per-user saved places enforced with Supabase Row Level Security
+- Android share-sheet support for Instagram post and reel links
+- Manual link entry without automatically starting a search
+- Instagram metadata import through an authenticated Supabase Edge Function and Apify
+- Google Places matching through an authenticated Supabase Edge Function
+- Candidate confirmation before a place is saved
+- Saved-place lifecycle states: Want to Go, Visited, and Skipped
+- An independent Favorite preference
+- User-created tags with rename, delete, assignment, and filtering
+- Editable notes and links to the original Instagram post and Google Maps
+- A targeted retry for transient cross-provider JWT clock skew
+- Internal EAS preview builds for standalone device testing
+
+Lemonade processes only links submitted by the user. It does not read Instagram DMs or Saved posts, call private Instagram APIs, or download and rehost videos.
+
+## Architecture
+
+| Area | Technology | Responsibility |
+| --- | --- | --- |
+| Mobile app | Expo, React Native, TypeScript | Navigation, sharing, place management, and account UI |
+| Authentication | Clerk | Sign-up, sign-in, verification, and session tokens |
+| Database | Supabase Postgres | Saved places and editable tag catalog |
+| Authorization | Supabase RLS | Isolates every user's places and tags by Clerk subject |
+| Server functions | Supabase Edge Functions | Authenticated access to Apify and Google Places |
+| Instagram metadata | Apify | Retrieves metadata for a submitted public post or reel |
+| Place matching | Google Places API | Returns real-world place candidates |
+| Builds | Expo Application Services | Development, preview, and production profiles |
+
+Provider secrets stay in Supabase. The mobile bundle contains only public Expo configuration values.
+
+## Prerequisites
+
+- Node.js and npm
+- An Expo account and EAS CLI
+- A Supabase project
+- A Clerk application connected through Supabase Third-Party Auth
+- Apify and Google Places API credentials for the real provider flow
+
+## Local Setup
 
 Install dependencies:
 
@@ -26,193 +55,136 @@ Install dependencies:
 npm install
 ```
 
-Core dependencies include `@supabase/supabase-js` for cloud persistence and `react-native-url-polyfill` for React Native Supabase compatibility. Authentication session persistence is disabled because the MVP has no authentication flow.
+Create the local environment file:
 
-Create a local env file and configure Supabase:
-
-```bash
-copy .env.example .env
+```powershell
+Copy-Item .env.example .env
 ```
 
-Saved places require these Supabase settings:
+Configure these public values in `.env`:
 
 ```text
+EXPO_PUBLIC_PLACE_SEARCH_PROVIDER=google
+EXPO_PUBLIC_INSTAGRAM_IMPORT_PROVIDER=apify
+EXPO_PUBLIC_DEFAULT_SEARCH_REGION=HK
 EXPO_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co
-EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-public-key
+EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-publishable-key
+EXPO_PUBLIC_CLERK_PUBLISHABLE_KEY=your-clerk-publishable-key
 ```
 
-Do not put service role keys or other secrets in Expo public environment variables.
+Use `EXPO_PUBLIC_PLACE_SEARCH_PROVIDER=mock` when Google Places is not configured.
 
-Start the app:
+Never put a Supabase secret/service-role key, Clerk secret key, Apify token, or Google Places secret in an `EXPO_PUBLIC_` variable. Expo public values are embedded in the app.
+
+## Clerk and Supabase
+
+This project uses Clerk as a Supabase Third-Party Auth provider. Configure the integration in both services before running the authenticated data flow:
+
+1. Connect the Clerk application from Clerk's Supabase integration setup.
+2. Enable Clerk under **Supabase → Authentication → Third-Party Auth**.
+3. Ensure Clerk session tokens contain `"role": "authenticated"`.
+4. Use the Clerk publishable key in the Expo environment.
+
+The app passes the current Clerk session token to `supabase-js`. Database policies compare its `sub` claim with each row's `user_id`.
+
+## Supabase Database
+
+Apply every migration in `supabase/migrations` in filename order:
+
+```bash
+supabase db push
+```
+
+The current schema includes:
+
+- `saved_places`, scoped by `user_id`
+- `place_tags`, scoped by `user_id`
+- Per-user uniqueness constraints
+- Authenticated-only grants and Row Level Security policies
+- User-scoped tag rename and delete functions
+
+Anonymous access to saved places and tags is intentionally revoked. Existing data from the earlier no-account MVP must be assigned administratively to the correct Clerk user during migration.
+
+## Edge Functions
+
+Set provider credentials as Supabase secrets:
+
+```bash
+supabase secrets set APIFY_API_TOKEN=your-apify-token
+supabase secrets set GOOGLE_PLACES_API_KEY=your-google-places-key
+```
+
+Deploy both functions:
+
+```bash
+supabase functions deploy instagram-import
+supabase functions deploy place-search
+```
+
+The function settings in `supabase/config.toml` disable Supabase gateway JWT verification because the gateway does not validate Clerk tokens for this configuration. Both handlers instead verify the Clerk signature, issuer, subject, and authenticated role before contacting Apify or Google. Do not remove that handler-level verification.
+
+The mobile client never receives either provider secret.
+
+## Running the App
+
+Start Metro:
 
 ```bash
 npm run start
 ```
 
-Then open it with Expo Go, an iOS simulator, or an Android emulator from the Expo terminal.
+Expo Go can be useful for basic JavaScript UI work, but the native share-intent integration requires a development or standalone build.
 
-## Useful Scripts
+Run a native Android development build:
 
 ```bash
-npm run typecheck
 npm run android
-npm run ios
 ```
+
+Create an installable internal preview:
+
+```bash
+eas build --profile preview --platform android
+```
+
+The EAS project ID and Android/iOS application identifiers are configured in `app.json`.
+
+## Validation
+
+```bash
+npm test
+npm run typecheck
+npx expo-doctor
+```
+
+The regression suite covers link validation and sharing behavior, candidate selection, lifecycle and favorite independence, user-managed tags, Clerk ownership and RLS migration expectations, authenticated Edge Functions, and JWT clock-skew retry behavior.
 
 ## Project Structure
 
 ```text
 src/
-  components/              Shared UI building blocks
-  data/                    Mock place-search candidates
-  navigation/              Lightweight MVP navigation types and router
-  repositories/savedPlaces/ Supabase saved-place data access
-  screens/                 Home, Add Place, Candidate Match, Place Detail
-  services/placeExtraction/ AI-ready extraction interface and mock implementation
-  services/placeSearch/    Provider interface and mock implementation
-  store/                   In-memory saved places state
-  types/                   Domain types for place cards and filters
-  utils/                   Display labels and formatting helpers
+  components/                 Shared UI components
+  navigation/                 App navigation and route types
+  repositories/savedPlaces/  Supabase saved-place and tag data access
+  screens/                    Authentication, account, import, places, and detail screens
+  services/placeExtraction/  Instagram metadata interpretation
+  services/placeSearch/      Mock and Google-backed place matching
+  store/                      Authenticated place and tag state
+  types/                      Domain and environment types
+  utils/                      Display and link helpers
+supabase/
+  functions/                  Authenticated Instagram import and place search
+  migrations/                 Database schema, tag catalog, and user ownership
+tests/                        Regression tests
 ```
 
-## User-managed Tags
+## Known Scope
 
-Saved-place tags are created, renamed, and deleted by the user from Place Detail. Tags use the
-user's own wording and are not a fixed taxonomy. The shared `place_tags` catalog stores the
-available tags, while `saved_places.user_tags` stores the tags assigned to each place. Renaming
-or deleting a catalog tag updates every saved place that uses it.
+- Instagram import supports public post and reel URLs submitted by the user.
+- Place-search geography currently defaults to Hong Kong and can be configured for Singapore.
+- The app is currently optimized and device-tested on Android; iOS share-extension testing remains pending.
+- The visual design is still MVP-level and is scheduled for the next phase.
 
-Tags are the only user-facing place classification and filtering system. The Places screen shows
-compact filter chips only for tags assigned to at least one saved place. A selected tag and Status
-filter use AND logic. Generated provider categories remain internal import data and do not create
-filter membership. Legacy category-override and fixed-filter fields remain stored for backward
-compatibility but are no longer exposed or used for Places filtering.
+## Next Phase
 
-When a search result or manual place is saved, the app compares its known name, category,
-specialty, provider clues, and import clues with the user's tag catalog. It can assign only matching
-tags that the user has already created; when the catalog is empty, it assigns none.
-
-## Supabase Setup
-
-Apply every file in `supabase/migrations` in filename order (or run `supabase db push`).
-
-The migration creates a `saved_places` table with:
-
-```text
-id, name, address, area_or_city, category, cuisine_or_specialty, tags, user_tags,
-notes, source_url, place_id, map_url, status, is_favorite, user_category_override, filter_overrides, created_at, updated_at
-```
-
-Lifecycle status is one of `want_to_go`, `visited`, or `skipped`. `is_favorite` is an
-independent preference flag, so a place can be both Favorite and any lifecycle status.
-Generated `category` remains available to the import pipeline but does not drive user-facing
-filtering. `user_category_override` and `filter_overrides` are retained as legacy compatibility
-fields and are no longer exposed by the UI. Apply the historical migrations in filename order,
-including the editable tag-catalog migration, before releasing the tag-filtering client.
-
-
-The included row-level security policies allow anonymous CRUD access so the no-auth MVP can work from Expo Go. This is for development only. Before production, add authentication, add a `user_id` column, and replace the permissive policies with user-scoped policies.
-
-If the Supabase URL or publishable key is missing, the app shows a cloud-configuration error and disables adding places. It never redirects saved-place operations to device-only storage.
-
-## Google Places Search
-
-The mobile app never calls Google Places directly. Real place search is routed through the Supabase Edge Function in `supabase/functions/place-search/index.ts`.
-
-Use the mock provider by default:
-
-```text
-EXPO_PUBLIC_PLACE_SEARCH_PROVIDER=mock
-```
-
-Use Google Places through Supabase:
-
-```text
-EXPO_PUBLIC_PLACE_SEARCH_PROVIDER=google
-EXPO_PUBLIC_SUPABASE_URL=https://your-project-ref.supabase.co
-EXPO_PUBLIC_SUPABASE_PUBLISHABLE_KEY=your-public-key
-```
-
-Set the Google key only as a Supabase secret. Do not commit it to `.env`, `.env.example`, or source code:
-
-```bash
-supabase secrets set GOOGLE_PLACES_API_KEY=your-google-places-api-key
-```
-
-Deploy the Edge Function:
-
-```bash
-supabase functions deploy place-search --project-ref your-project-ref
-```
-
-For local Edge Function testing:
-
-```bash
-supabase functions serve place-search --env-file supabase/.env.local
-```
-
-The function uses Google Places Text Search (New), normalizes results to app candidates, and returns fields such as Google place ID, formatted address, area/city, coordinates, Google Maps URL, primary type, rating, and review count. If `GOOGLE_PLACES_API_KEY` is missing, the app falls back to mock search.
-
-## Instagram Import with Apify
-
-The mobile app does not call Apify directly and never contains the Apify token. Instagram link import is routed through the Supabase Edge Function in `supabase/functions/instagram-import/index.ts`.
-
-Set the Apify token only as a Supabase secret:
-
-```bash
-supabase secrets set APIFY_API_TOKEN=your-apify-api-token
-```
-
-Deploy the Edge Function:
-
-```bash
-supabase functions deploy instagram-import --project-ref your-project-ref
-```
-
-For local Edge Function testing:
-
-```bash
-supabase functions serve instagram-import --env-file supabase/.env.local
-```
-
-The function accepts:
-
-```json
-{ "url": "https://www.instagram.com/reel/..." }
-```
-
-It validates that the URL is a public Instagram post or reel URL, removes query params and fragments, calls Apify's `apify/instagram-scraper` Actor, and returns only the metadata the app needs for place extraction: caption, hashtags, mentions, owner name, timestamp, thumbnail URL, shortcode, and source URLs.
-
-Limitations for the MVP:
-
-- Only user-submitted public Instagram post and reel URLs are processed.
-- The mobile client never scrapes Instagram directly; the Edge Function delegates public-post metadata retrieval to Apify's scraper.
-- Saved posts and DMs are never accessed.
-- Videos are not downloaded or rehosted.
-- Engagement metrics are intentionally not stored.
-- If Apify fails or returns no useful metadata, the app asks for a manual place search hint and keeps the save flow usable.
-
-## Hong Kong Place Search Accuracy
-
-Instagram import captures Apify metadata beyond captions, including tagged users, collaborators/coauthors, and location fields when Apify returns them. This metadata is used for place extraction but is not written to client or Edge Function logs.
-
-Place extraction now builds ordered search candidates from Instagram location name, tagged users, collaborators, caption mentions, caption place-name clues, and user hints. Usernames are converted into readable business-name queries and each query is geo-suffixed, defaulting to Hong Kong in development:
-
-```text
-EXPO_PUBLIC_DEFAULT_SEARCH_REGION=HK
-```
-
-The `place-search` Supabase Edge Function receives that geo context, appends `Hong Kong` when needed, sends `regionCode: "HK"`, `languageCode: "en"`, and a Hong Kong `locationBias` rectangle to Google Places Text Search. Set this Supabase secret only if you want to test stricter filtering later:
-
-```bash
-supabase secrets set GOOGLE_PLACES_USE_LOCATION_RESTRICTION=true
-```
-
-By default the function uses `locationBias`, not `locationRestriction`, so Google can still recover good nearby matches while avoiding Singapore-first results caused by server-region/IP bias.
-
-## Future Integration Notes
-
-- Keep `src/services/placeSearch/mockPlaceSearchService.ts` for offline development and use `EXPO_PUBLIC_PLACE_SEARCH_PROVIDER=google` when testing real Google Places matching.
-- Replace `src/services/placeExtraction/mockPlaceExtractionService.ts` with a real AI provider when extraction is ready. Keep that provider behind a backend function so API keys are not exposed in Expo.
-- Add Supabase auth and user-scoped saved-place policies before multi-user production testing.
-- Add auth only after the local save flow and database schema are stable.
+The next milestone is a cohesive visual design system: typography, color tokens, spacing, reusable controls, light/dark customization, polished loading and error states, and a screen-by-screen redesign of the main save flow.
