@@ -31,7 +31,8 @@ export const mapTagRow = (row: PlaceTagRow): PlaceTag => ({
   updatedAt: row.updated_at
 });
 
-export const mapPlaceToRow = (place: NewPlace): SavedPlaceInsert => ({
+export const mapPlaceToRow = (place: NewPlace, userId: string): SavedPlaceInsert => ({
+  user_id: userId,
   id: place.id,
   name: place.placeName,
   address: place.address,
@@ -79,7 +80,10 @@ export const shouldReplaceIncompleteManualPlace = (
   Boolean(replacement.placeId);
 
 export class SupabaseSavedPlacesRepository implements SavedPlacesRepository {
-  constructor(private readonly supabase: SupabaseClient) {}
+  constructor(
+    private readonly supabase: SupabaseClient,
+    private readonly userId: string
+  ) {}
 
   private async findExistingPlace(place: NewPlace) {
     if (place.placeId) {
@@ -87,6 +91,7 @@ export class SupabaseSavedPlacesRepository implements SavedPlacesRepository {
         .from('saved_places')
         .select('*')
         .eq('place_id', place.placeId)
+        .eq('user_id', this.userId)
         .limit(1)
         .maybeSingle();
 
@@ -104,6 +109,7 @@ export class SupabaseSavedPlacesRepository implements SavedPlacesRepository {
       .from('saved_places')
       .select('*')
       .eq('source_url', normalizedSourceUrl)
+      .eq('user_id', this.userId)
       .limit(1)
       .maybeSingle();
 
@@ -118,6 +124,7 @@ export class SupabaseSavedPlacesRepository implements SavedPlacesRepository {
     const { data, error } = await this.supabase
       .from('saved_places')
       .select('*')
+      .eq('user_id', this.userId)
       .order('created_at', { ascending: false });
 
     if (error) {
@@ -131,6 +138,7 @@ export class SupabaseSavedPlacesRepository implements SavedPlacesRepository {
     const { data, error } = await this.supabase
       .from('place_tags')
       .select('*')
+      .eq('user_id', this.userId)
       .order('name', { ascending: true });
 
     if (error) {
@@ -143,7 +151,7 @@ export class SupabaseSavedPlacesRepository implements SavedPlacesRepository {
   async createTag(name: string) {
     const { data, error } = await this.supabase
       .from('place_tags')
-      .insert({ name })
+      .insert({ name, user_id: this.userId })
       .select()
       .single();
 
@@ -202,7 +210,7 @@ export class SupabaseSavedPlacesRepository implements SavedPlacesRepository {
 
     const { data, error } = await this.supabase
       .from('saved_places')
-      .insert(mapPlaceToRow(place))
+      .insert(mapPlaceToRow(place, this.userId))
       .select()
       .single();
 
@@ -229,6 +237,7 @@ export class SupabaseSavedPlacesRepository implements SavedPlacesRepository {
       .from('saved_places')
       .update(mapPlaceUpdateToRow(updates))
       .eq('id', id)
+      .eq('user_id', this.userId)
       .select()
       .single();
 
@@ -244,7 +253,11 @@ export class SupabaseSavedPlacesRepository implements SavedPlacesRepository {
   }
 
   async deletePlace(id: string) {
-    const { error } = await this.supabase.from('saved_places').delete().eq('id', id);
+    const { error } = await this.supabase
+      .from('saved_places')
+      .delete()
+      .eq('id', id)
+      .eq('user_id', this.userId);
 
     if (error) {
       throw toSupabaseError('delete', error.message);

@@ -1,4 +1,8 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
+import {
+  ClerkAuthenticationError,
+  requireClerkUser
+} from '../_shared/clerkAuth.ts';
 import type {
   GeoContext,
   PlaceCandidate,
@@ -336,6 +340,24 @@ Deno.serve(async (req: Request) => {
     return jsonResponse(
       { error: { code: 'METHOD_NOT_ALLOWED', message: 'Use POST for place search.' } },
       405
+    );
+  }
+
+  try {
+    await requireClerkUser(req);
+  } catch (error) {
+    return jsonResponse(
+      {
+        candidates: [],
+        error: {
+          code: 'UNAUTHORIZED',
+          message:
+            error instanceof ClerkAuthenticationError
+              ? error.message
+              : 'Authentication is required.'
+        }
+      },
+      401
     );
   }
 

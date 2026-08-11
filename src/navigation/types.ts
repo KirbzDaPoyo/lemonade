@@ -2,6 +2,7 @@ import { DraftPlaceEntry, PlaceCandidate } from '../types/place';
 
 export type AppRoute =
   | { name: 'Home' }
+  | { name: 'Account' }
   | {
       name: 'AddPlace';
       initialInstagramUrl?: string;

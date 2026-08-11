@@ -21,7 +21,9 @@
           ]
         }
       ],
-      "expo-asset"
+      "expo-asset",
+      "expo-secure-store",
+      "@clerk/expo"
     ],
     "assetBundlePatterns": [
       "**/*"

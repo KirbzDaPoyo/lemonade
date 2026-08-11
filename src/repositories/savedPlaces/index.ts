@@ -1,4 +1,7 @@
-import { createSupabaseClient } from '../../lib/supabaseClient';
+import {
+  createSupabaseClient,
+  type SupabaseAccessTokenProvider
+} from '../../lib/supabaseClient';
 import { SupabaseSavedPlacesRepository } from './SupabaseSavedPlacesRepository';
 import { SavedPlacesRepository } from './types';
 
@@ -9,8 +12,11 @@ export type SavedPlacesRepositoryConfiguration = {
   error?: string;
 };
 
-export const createSavedPlacesRepository = (): SavedPlacesRepositoryConfiguration => {
-  const supabase = createSupabaseClient();
+export const createSavedPlacesRepository = (
+  userId: string,
+  accessTokenProvider: SupabaseAccessTokenProvider
+): SavedPlacesRepositoryConfiguration => {
+  const supabase = createSupabaseClient(accessTokenProvider);
 
   if (!supabase) {
     return {
@@ -19,5 +25,7 @@ export const createSavedPlacesRepository = (): SavedPlacesRepositoryConfiguratio
     };
   }
 
-  return { repository: new SupabaseSavedPlacesRepository(supabase) };
+  return {
+    repository: new SupabaseSavedPlacesRepository(supabase, userId)
+  };
 };

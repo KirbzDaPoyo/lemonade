@@ -1,0 +1,7 @@
+project_id = "project-lemonade"
+
+[functions.instagram-import]
+verify_jwt = false
+
+[functions.place-search]
+verify_jwt = false
