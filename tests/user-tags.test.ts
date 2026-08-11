@@ -33,6 +33,7 @@ const savedPlaceRow = (overrides: Partial<SavedPlaceRow> = {}): SavedPlaceRow =>
   is_favorite: false,
   created_at: '2026-08-01T00:00:00.000Z',
   updated_at: '2026-08-01T00:00:00.000Z',
+  user_id: 'user-id',
   ...overrides
 });
 
@@ -81,7 +82,7 @@ test('existing saved tags are treated as user-created when user_tags is absent',
 test('repository inserts and assignments use user_tags without mutating the preserved column', () => {
   const place = mapRowToPlace(savedPlaceRow({ user_tags: ['My tag'] }));
   const { createdAt: _createdAt, updatedAt: _updatedAt, ...newPlace } = place;
-  const inserted = mapPlaceToRow({ ...newPlace, id: place.id });
+  const inserted = mapPlaceToRow({ ...newPlace, id: place.id }, 'user-id');
 
   assert.deepEqual(inserted.tags, []);
   assert.deepEqual(inserted.user_tags, ['My tag']);
@@ -93,7 +94,8 @@ test('tag catalog rows map to editable domain tags', () => {
     id: 'tag-id',
     name: 'Date Night',
     created_at: '2026-08-03T00:00:00.000Z',
-    updated_at: '2026-08-03T00:00:00.000Z'
+    updated_at: '2026-08-03T00:00:00.000Z',
+    user_id: 'user-id'
   };
 
   assert.deepEqual(mapTagRow(row), {

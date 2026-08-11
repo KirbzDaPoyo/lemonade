@@ -37,8 +37,19 @@ const getErrorMessage = (fallback: string, error: unknown) =>
 const sortTags = (tags: PlaceTag[]) =>
   [...tags].sort((left, right) => left.name.localeCompare(right.name));
 
-export function PlacesProvider({ children }: { children: ReactNode }) {
-  const repositoryConfiguration = useMemo(() => createSavedPlacesRepository(), []);
+export function PlacesProvider({
+  accessTokenProvider,
+  children,
+  userId
+}: {
+  accessTokenProvider: () => Promise<string | null>;
+  children: ReactNode;
+  userId: string;
+}) {
+  const repositoryConfiguration = useMemo(
+    () => createSavedPlacesRepository(userId, accessTokenProvider),
+    [accessTokenProvider, userId]
+  );
   const { repository, error: configurationError } = repositoryConfiguration;
   const [places, setPlaces] = useState<PlaceCard[]>([]);
   const [availableTags, setAvailableTags] = useState<PlaceTag[]>([]);

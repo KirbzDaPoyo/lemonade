@@ -50,12 +50,20 @@ export function HomeScreen({ navigation }: HomeScreenProps) {
           <Text style={styles.eyebrow}>Saved from Instagram</Text>
           <Text style={styles.title}>Places</Text>
         </View>
-        <AppButton
-          disabled={!isStorageAvailable}
-          label="Add"
-          onPress={() => navigation.navigate({ name: 'AddPlace' })}
-          style={styles.addButton}
-        />
+        <View style={styles.headerActions}>
+          <AppButton
+            label="Account"
+            onPress={() => navigation.navigate({ name: 'Account' })}
+            style={styles.accountButton}
+            variant="ghost"
+          />
+          <AppButton
+            disabled={!isStorageAvailable}
+            label="Add"
+            onPress={() => navigation.navigate({ name: 'AddPlace' })}
+            style={styles.addButton}
+          />
+        </View>
       </View>
 
       <FilterBar selectedStatus={selectedStatus} onStatusChange={setSelectedStatus} />
@@ -120,9 +128,19 @@ const styles = StyleSheet.create({
     fontSize: 34,
     fontWeight: '900'
   },
+  headerActions: {
+    alignItems: 'center',
+    flexDirection: 'row',
+    gap: spacing.xs
+  },
+  accountButton: {
+    minHeight: 44,
+    paddingHorizontal: spacing.sm
+  },
   addButton: {
     minHeight: 44,
-    minWidth: 76
+    minWidth: 68,
+    paddingHorizontal: spacing.md
   },
   listContent: {
     gap: spacing.md,

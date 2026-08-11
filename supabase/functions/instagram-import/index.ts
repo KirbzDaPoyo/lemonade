@@ -1,4 +1,8 @@
 import 'jsr:@supabase/functions-js/edge-runtime.d.ts';
+import {
+  ClerkAuthenticationError,
+  requireClerkUser
+} from '../_shared/clerkAuth.ts';
 
 type UnknownRecord = Record<string, unknown>;
 
@@ -212,6 +216,23 @@ Deno.serve(async (req: Request) => {
     return jsonResponse(
       { error: { code: 'METHOD_NOT_ALLOWED', message: 'Use POST for Instagram import.' } },
       405
+    );
+  }
+
+  try {
+    await requireClerkUser(req);
+  } catch (error) {
+    return jsonResponse(
+      {
+        error: {
+          code: 'UNAUTHORIZED',
+          message:
+            error instanceof ClerkAuthenticationError
+              ? error.message
+              : 'Authentication is required.'
+        }
+      },
+      401
     );
   }
 

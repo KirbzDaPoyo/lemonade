@@ -29,6 +29,7 @@ const savedPlaceRow = (overrides: Partial<SavedPlaceRow> = {}): SavedPlaceRow =>
   is_favorite: true,
   created_at: '2026-08-01T00:00:00.000Z',
   updated_at: '2026-08-01T00:00:00.000Z',
+  user_id: 'user-id',
   ...overrides
 });
 
@@ -82,7 +83,7 @@ test('Supabase row mapping reads Favorite separately from lifecycle status', () 
 
 test('Supabase insert and update mapping write Favorite separately', () => {
   const { createdAt: _createdAt, updatedAt: _updatedAt, ...newPlace } = placeCard();
-  const insert = mapPlaceToRow(newPlace);
+  const insert = mapPlaceToRow(newPlace, 'user-id');
 
   assert.equal(insert.status, 'visited');
   assert.equal(insert.is_favorite, true);

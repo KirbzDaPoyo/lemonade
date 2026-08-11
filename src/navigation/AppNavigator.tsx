@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { Alert } from 'react-native';
 import { useShareIntentContext } from 'expo-share-intent';
 
+import { AccountScreen } from '../screens/AccountScreen';
 import { AddPlaceScreen } from '../screens/AddPlaceScreen';
 import { CandidateMatchScreen } from '../screens/CandidateMatchScreen';
 import { HomeScreen } from '../screens/HomeScreen';
@@ -75,6 +76,10 @@ export function AppNavigator() {
       ),
     resetToHome: () => setStack([{ name: 'Home' }])
   };
+
+  if (currentRoute.name === 'Account') {
+    return <AccountScreen navigation={navigation} />;
+  }
 
   if (currentRoute.name === 'AddPlace') {
     return (
