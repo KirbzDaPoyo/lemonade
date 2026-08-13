@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 
 import { extractInstagramUrl } from '../src/services/incomingShare/instagramUrl';
+import { getIncomingInstagramUrl } from '../src/navigation/share-routing';
 
 test('accepts Instagram post and reel URLs', () => {
   assert.equal(
@@ -42,11 +43,19 @@ test('rejects unsafe or unsupported Instagram-like URLs', () => {
 });
 
 test('incoming shares prefill the URL without starting a search automatically', () => {
-  const navigatorSource = readFileSync('src/navigation/AppNavigator.tsx', 'utf8');
+  const coordinatorSource = readFileSync('src/navigation/share-coordinator.tsx', 'utf8');
   const addPlaceSource = readFileSync('src/screens/AddPlaceScreen.tsx', 'utf8');
 
-  assert.match(navigatorSource, /initialInstagramUrl: instagramUrl/);
-  assert.doesNotMatch(navigatorSource, /autoStart/);
+  assert.equal(
+    getIncomingInstagramUrl(
+      null,
+      'Watch https://www.instagram.com/reel/Shared_456/ now'
+    ),
+    'https://www.instagram.com/reel/Shared_456/'
+  );
+  assert.match(coordinatorSource, /beginSharedAdd\(instagramUrl\)/);
+  assert.match(coordinatorSource, /resetShareIntent\(\)/);
+  assert.doesNotMatch(coordinatorSource, /autoStart/);
   assert.doesNotMatch(addPlaceSource, /handleFindPlace\(initialInstagramUrl\)/);
 });
 

@@ -24,7 +24,8 @@
       "expo-asset",
       "expo-secure-store",
       "@clerk/expo",
-      "expo-font"
+      "expo-font",
+      "expo-router"
     ],
     "assetBundlePatterns": [
       "**/*"
