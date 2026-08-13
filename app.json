@@ -4,7 +4,7 @@
     "slug": "project-lemonade",
     "version": "0.1.0",
     "orientation": "portrait",
-    "userInterfaceStyle": "light",
+    "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "scheme": "project-lemonade",
     "plugins": [
@@ -23,7 +23,8 @@
       ],
       "expo-asset",
       "expo-secure-store",
-      "@clerk/expo"
+      "@clerk/expo",
+      "expo-font"
     ],
     "assetBundlePatterns": [
       "**/*"

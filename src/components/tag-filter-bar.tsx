@@ -1,6 +1,7 @@
+import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { colors, spacing } from '../theme';
+import { AppTheme, useAppTheme } from '../design-system/theme';
 import type { PlaceTag } from '../types/place';
 
 type TagFilterBarProps = {
@@ -10,19 +11,16 @@ type TagFilterBarProps = {
 };
 
 export function TagFilterBar({ tags, selectedTagId, onTagChange }: TagFilterBarProps) {
-  if (tags.length === 0) {
-    return null;
-  }
+  const { theme } = useAppTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
+
+  if (tags.length === 0) return null;
 
   return (
     <View style={styles.section}>
-      <Text style={styles.label}>Tags</Text>
+      <Text style={styles.label}>Tag filter</Text>
       <View style={styles.chips}>
-        <TagChip
-          label="All"
-          selected={selectedTagId === null}
-          onPress={() => onTagChange(null)}
-        />
+        <TagChip label="All" selected={selectedTagId === null} onPress={() => onTagChange(null)} />
         {tags.map((tag) => (
           <TagChip
             key={tag.id}
@@ -36,70 +34,46 @@ export function TagFilterBar({ tags, selectedTagId, onTagChange }: TagFilterBarP
   );
 }
 
-function TagChip({
-  label,
-  selected,
-  onPress
-}: {
-  label: string;
-  selected: boolean;
-  onPress: () => void;
-}) {
+function TagChip({ label, selected, onPress }: { label: string; selected: boolean; onPress: () => void }) {
+  const { theme } = useAppTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
+
   return (
     <Pressable
       accessibilityLabel={`Filter by ${label}`}
       accessibilityRole="button"
       accessibilityState={{ selected }}
       onPress={onPress}
-      style={({ pressed }) => [
-        styles.chip,
-        selected && styles.selectedChip,
-        pressed && styles.pressed
-      ]}
+      style={({ pressed }) => [styles.chip, selected && styles.selectedChip, pressed && styles.pressed]}
     >
       <Text style={[styles.chipText, selected && styles.selectedChipText]}>{label}</Text>
     </Pressable>
   );
 }
 
-const styles = StyleSheet.create({
-  section: {
-    gap: spacing.sm
-  },
-  label: {
-    color: colors.muted,
-    fontSize: 12,
-    fontWeight: '900',
-    textTransform: 'uppercase'
-  },
-  chips: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm
-  },
-  chip: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: 999,
-    borderWidth: 1,
-    minHeight: 38,
-    justifyContent: 'center',
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.xs
-  },
-  selectedChip: {
-    backgroundColor: colors.primary,
-    borderColor: colors.primary
-  },
-  chipText: {
-    color: colors.text,
-    fontSize: 13,
-    fontWeight: '800'
-  },
-  selectedChipText: {
-    color: colors.surface
-  },
-  pressed: {
-    opacity: 0.78
-  }
-});
+const createStyles = (theme: AppTheme) =>
+  StyleSheet.create({
+    section: { gap: theme.spacing.sm },
+    label: {
+      color: theme.colors.textMuted,
+      fontSize: theme.typography.label.small,
+      fontWeight: '900',
+      letterSpacing: 1.2,
+      textTransform: 'uppercase'
+    },
+    chips: { flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing.sm },
+    chip: {
+      backgroundColor: theme.colors.surface,
+      borderColor: theme.colors.border,
+      borderRadius: theme.radii.sm,
+      borderWidth: 1,
+      justifyContent: 'center',
+      minHeight: 44,
+      paddingHorizontal: theme.spacing.md,
+      paddingVertical: theme.spacing.sm
+    },
+    selectedChip: { backgroundColor: theme.colors.primary, borderColor: theme.colors.primary },
+    chipText: { color: theme.colors.text, fontSize: theme.typography.body.small, fontWeight: '800' },
+    selectedChipText: { color: theme.colors.onPrimary },
+    pressed: { opacity: 0.72 }
+  });

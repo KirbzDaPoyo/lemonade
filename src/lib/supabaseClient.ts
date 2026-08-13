@@ -31,13 +31,15 @@ export type PlaceTagRow = {
   user_id: string;
 };
 
-export type SupabaseAccessTokenProvider = () => Promise<string | null>;
+export type SupabaseAccessTokenProvider = (options?: {
+  skipCache?: boolean;
+}) => Promise<string | null>;
 
-const JWT_CLOCK_SKEW_RETRY_DELAY_MS = 1000;
+const JWT_CLOCK_SKEW_RETRY_DELAYS_MS = [1000, 2000] as const;
 const wait = (milliseconds: number) =>
   new Promise<void>((resolve) => setTimeout(resolve, milliseconds));
 
-const isJwtIssuedInFutureResponse = async (response: Response) => {
+const isJwtClockSkewResponse = async (response: Response) => {
   if (response.status !== 401) {
     return false;
   }
@@ -47,22 +49,48 @@ const isJwtIssuedInFutureResponse = async (response: Response) => {
     .text()
     .catch(() => '');
 
-  return /jwt issued at future/i.test(body);
+  return /jwt(?:\s+issued\s+at\s+future|\s+not\s+yet\s+valid)/i.test(body);
+};
+
+const withAccessToken = (
+  input: RequestInfo | URL,
+  init: RequestInit | undefined,
+  accessToken: string | null
+): RequestInit | undefined => {
+  if (!accessToken) return init;
+
+  const requestHeaders =
+    typeof Request !== 'undefined' && input instanceof Request
+      ? input.headers
+      : undefined;
+  const headers = new Headers(init?.headers ?? requestHeaders);
+  headers.set('Authorization', 'Bearer ' + accessToken);
+
+  return { ...init, headers };
 };
 
 export const createSupabaseFetchWithJwtClockSkewRetry = (
   baseFetch: typeof fetch = fetch,
-  delay: (milliseconds: number) => Promise<void> = wait
+  delay: (milliseconds: number) => Promise<void> = wait,
+  accessTokenProvider?: SupabaseAccessTokenProvider
 ): typeof fetch =>
   async (input, init) => {
-    const response = await baseFetch(input, init);
+    let response = await baseFetch(input, init);
 
-    if (!(await isJwtIssuedInFutureResponse(response))) {
-      return response;
+    for (const retryDelay of JWT_CLOCK_SKEW_RETRY_DELAYS_MS) {
+      if (!(await isJwtClockSkewResponse(response))) {
+        return response;
+      }
+
+      await delay(retryDelay);
+      const freshAccessToken = await accessTokenProvider?.({ skipCache: true });
+      response = await baseFetch(
+        input,
+        withAccessToken(input, init, freshAccessToken ?? null)
+      );
     }
 
-    await delay(JWT_CLOCK_SKEW_RETRY_DELAY_MS);
-    return baseFetch(input, init);
+    return response;
   };
 
 let client: SupabaseClient | undefined;
@@ -85,7 +113,11 @@ export const createSupabaseClient = (
     {
       accessToken: async () => currentAccessTokenProvider?.() ?? null,
       global: {
-        fetch: createSupabaseFetchWithJwtClockSkewRetry()
+        fetch: createSupabaseFetchWithJwtClockSkewRetry(
+          fetch,
+          wait,
+          (options) => currentAccessTokenProvider?.(options) ?? Promise.resolve(null)
+        )
       },
       auth: {
         autoRefreshToken: false,

@@ -34,5 +34,9 @@ export const matchesTagFilter = (place: PlaceCard, tagName: string | null) => {
 export const matchesPlacesScreenFilters = (
   place: PlaceCard,
   statusFilter: PlaceStatusFilter,
-  tagName: string | null
-) => matchesStatusFilter(place, statusFilter) && matchesTagFilter(place, tagName);
+  tagName: string | null,
+  favoritesOnly = false
+) =>
+  matchesStatusFilter(place, statusFilter) &&
+  matchesTagFilter(place, tagName) &&
+  (!favoritesOnly || place.isFavorite);

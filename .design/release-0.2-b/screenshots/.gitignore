@@ -1,0 +1,4 @@
+# Native review captures may contain private account data.
+*.jpeg
+*.jpg
+*.png

@@ -1,116 +1,77 @@
+import { useMemo } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { colors, radii, spacing } from '../theme';
+import { AppTheme, useAppTheme } from '../design-system/theme';
 import { PlaceCard } from '../types/place';
 import { favoriteLabel, statusLabels } from '../utils/labels';
 
-type PlaceCardRowProps = {
-  place: PlaceCard;
-  onPress: () => void;
-};
+type PlaceCardRowProps = { place: PlaceCard; onPress: () => void };
 
 export function PlaceCardRow({ place, onPress }: PlaceCardRowProps) {
+  const { theme } = useAppTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
+
   return (
     <Pressable
       accessibilityRole="button"
       onPress={onPress}
-      style={({ pressed }) => [styles.card, pressed && styles.pressed]}
+      style={({ pressed }) => [styles.row, pressed && styles.pressed]}
     >
-      <View style={styles.headerRow}>
-        <View style={styles.titleColumn}>
-          <Text numberOfLines={1} style={styles.name}>
-            {place.placeName}
-          </Text>
-          <Text numberOfLines={1} style={styles.meta}>
-            {place.areaCity}
-          </Text>
-        </View>
-        <View style={styles.statusPill}>
-          <Text style={styles.statusText}>
-            {place.isFavorite ? `${favoriteLabel} - ` : ''}
-            {statusLabels[place.status]}
-          </Text>
-        </View>
-      </View>
-      <Text numberOfLines={2} style={styles.address}>
-        {place.address}
-      </Text>
-      <View style={styles.tagRow}>
-        {place.tags.slice(0, 3).map((tag) => (
-          <View key={tag} style={styles.tag}>
-            <Text style={styles.tagText}>{tag}</Text>
+      <View style={styles.indexRail} />
+      <View style={styles.content}>
+        <View style={styles.headerRow}>
+          <View style={styles.titleColumn}>
+            <Text numberOfLines={2} style={styles.name}>{place.placeName}</Text>
+            <Text numberOfLines={1} style={styles.meta}>{place.areaCity}</Text>
           </View>
-        ))}
+          <View style={[styles.status, place.isFavorite && styles.favoriteStatus]}>
+            <Text style={[styles.statusText, place.isFavorite && styles.favoriteText]}>
+              {place.isFavorite ? `${favoriteLabel} / ` : ''}{statusLabels[place.status]}
+            </Text>
+          </View>
+        </View>
+        <Text numberOfLines={2} style={styles.address}>{place.address}</Text>
+        {place.tags.length > 0 ? (
+          <View style={styles.tagRow}>
+            {place.tags.slice(0, 3).map((tag) => (
+              <View key={tag} style={styles.tag}><Text style={styles.tagText}>{tag}</Text></View>
+            ))}
+          </View>
+        ) : null}
       </View>
     </Pressable>
   );
 }
 
-const styles = StyleSheet.create({
-  card: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: radii.md,
-    borderWidth: 1,
-    gap: spacing.md,
-    padding: spacing.lg,
-    shadowColor: colors.shadow,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.06,
-    shadowRadius: 8
-  },
-  pressed: {
-    opacity: 0.82
-  },
-  headerRow: {
-    alignItems: 'flex-start',
-    flexDirection: 'row',
-    gap: spacing.md,
-    justifyContent: 'space-between'
-  },
-  titleColumn: {
-    flex: 1,
-    gap: spacing.xs
-  },
-  name: {
-    color: colors.text,
-    fontSize: 18,
-    fontWeight: '800'
-  },
-  meta: {
-    color: colors.muted,
-    fontSize: 14
-  },
-  address: {
-    color: colors.text,
-    fontSize: 14,
-    lineHeight: 20
-  },
-  statusPill: {
-    backgroundColor: colors.surfaceMuted,
-    borderRadius: radii.sm,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs
-  },
-  statusText: {
-    color: colors.primary,
-    fontSize: 12,
-    fontWeight: '800'
-  },
-  tagRow: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: spacing.sm
-  },
-  tag: {
-    backgroundColor: colors.surfaceMuted,
-    borderRadius: radii.sm,
-    paddingHorizontal: spacing.sm,
-    paddingVertical: spacing.xs
-  },
-  tagText: {
-    color: colors.muted,
-    fontSize: 12,
-    fontWeight: '700'
-  }
-});
+const createStyles = (theme: AppTheme) =>
+  StyleSheet.create({
+    row: {
+      backgroundColor: theme.colors.surface,
+      borderBottomColor: theme.colors.border,
+      borderBottomWidth: 1,
+      flexDirection: 'row',
+      minHeight: 148
+    },
+    pressed: { opacity: 0.7 },
+    indexRail: { backgroundColor: theme.colors.primary, width: 3 },
+    content: { flex: 1, gap: theme.spacing.md, padding: theme.spacing.lg },
+    headerRow: { alignItems: 'flex-start', flexDirection: 'row', gap: theme.spacing.md },
+    titleColumn: { flex: 1, gap: theme.spacing.xs },
+    name: {
+      color: theme.colors.text,
+      fontFamily: theme.typography.displayFamily,
+      fontSize: 26,
+      letterSpacing: 0.1,
+      lineHeight: 27,
+      textTransform: 'uppercase'
+    },
+    meta: { color: theme.colors.textMuted, fontSize: theme.typography.body.small, fontWeight: '700' },
+    address: { color: theme.colors.text, fontSize: theme.typography.body.medium, lineHeight: 21 },
+    status: { borderColor: theme.colors.borderStrong, borderRadius: theme.radii.xs, borderWidth: 1, paddingHorizontal: theme.spacing.sm, paddingVertical: theme.spacing.xs },
+    favoriteStatus: { borderColor: theme.colors.pink },
+    statusText: { color: theme.colors.textMuted, fontSize: theme.typography.label.small, fontWeight: '900', letterSpacing: 0.4, textTransform: 'uppercase' },
+    favoriteText: { color: theme.colors.pink },
+    tagRow: { flexDirection: 'row', flexWrap: 'wrap', gap: theme.spacing.sm },
+    tag: { backgroundColor: theme.colors.surfaceMuted, borderRadius: theme.radii.xs, paddingHorizontal: theme.spacing.sm, paddingVertical: theme.spacing.xs },
+    tagText: { color: theme.colors.textMuted, fontSize: theme.typography.label.small, fontWeight: '800' }
+  });

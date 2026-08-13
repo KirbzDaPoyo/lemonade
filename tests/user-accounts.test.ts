@@ -84,6 +84,63 @@ test('Supabase retries a future-issued JWT response once after clock skew settle
   assert.deepEqual(delays, [1000]);
 });
 
+test('Supabase recognizes JWT not-yet-valid responses and refreshes the access token', async () => {
+  const responses = [
+    new Response(JSON.stringify({ message: 'JWT not yet valid' }), { status: 401 }),
+    new Response(JSON.stringify({ data: [] }), { status: 200 })
+  ];
+  const delays: number[] = [];
+  const tokenOptions: Array<{ skipCache?: boolean } | undefined> = [];
+  const authorizationHeaders: Array<string | null> = [];
+  let requestCount = 0;
+  const retryingFetch = createSupabaseFetchWithJwtClockSkewRetry(
+    async (_input, init) => {
+      authorizationHeaders.push(new Headers(init?.headers).get('Authorization'));
+      return responses[requestCount++]!;
+    },
+    async (milliseconds) => {
+      delays.push(milliseconds);
+    },
+    async (options) => {
+      tokenOptions.push(options);
+      return 'fresh-token';
+    }
+  );
+
+  const response = await retryingFetch('https://example.test/place_tags', {
+    headers: { Authorization: 'Bearer original-token' }
+  });
+
+  assert.equal(response.status, 200);
+  assert.equal(requestCount, 2);
+  assert.deepEqual(delays, [1000]);
+  assert.deepEqual(tokenOptions, [{ skipCache: true }]);
+  assert.deepEqual(authorizationHeaders, [
+    'Bearer original-token',
+    'Bearer fresh-token'
+  ]);
+});
+
+test('Supabase clock-skew recovery uses bounded backoff', async () => {
+  const delays: number[] = [];
+  let requestCount = 0;
+  const retryingFetch = createSupabaseFetchWithJwtClockSkewRetry(
+    async () => {
+      requestCount += 1;
+      return new Response(JSON.stringify({ message: 'JWT not yet valid' }), { status: 401 });
+    },
+    async (milliseconds) => {
+      delays.push(milliseconds);
+    }
+  );
+
+  const response = await retryingFetch('https://example.test/place_tags');
+
+  assert.equal(response.status, 401);
+  assert.equal(requestCount, 3);
+  assert.deepEqual(delays, [1000, 2000]);
+});
+
 test('Supabase does not retry unrelated authentication failures', async () => {
   let requestCount = 0;
   const retryingFetch = createSupabaseFetchWithJwtClockSkewRetry(

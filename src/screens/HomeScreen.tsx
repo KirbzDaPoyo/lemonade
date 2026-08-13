@@ -1,180 +1,81 @@
 import { useEffect, useMemo, useState } from 'react';
-import { ActivityIndicator, FlatList, StyleSheet, Text, View } from 'react-native';
+import { FlatList, StyleSheet, Text, View } from 'react-native';
 
 import { AppButton } from '../components/AppButton';
 import { FilterBar } from '../components/FilterBar';
 import { PlaceCardRow } from '../components/PlaceCardRow';
+import { StatePanel } from '../components/state-panel';
 import { StorageErrorBanner } from '../components/storage-error-banner';
 import { TagFilterBar } from '../components/tag-filter-bar';
+import { AppTheme, useAppTheme } from '../design-system/theme';
 import { AppNavigation } from '../navigation/types';
-import {
-  getAssignedTagFilterOptions,
-  matchesPlacesScreenFilters
-} from '../services/placeFilters';
+import { getAssignedTagFilterOptions, matchesPlacesScreenFilters } from '../services/placeFilters';
 import { usePlaces } from '../store/PlacesContext';
-import { colors, spacing } from '../theme';
 import type { PlaceStatusFilter } from '../types/filters';
 
-type HomeScreenProps = {
-  navigation: AppNavigation;
-};
+type HomeScreenProps = { navigation: AppNavigation };
 
 export function HomeScreen({ navigation }: HomeScreenProps) {
+  const { theme } = useAppTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const { availableTags, isLoading, isStorageAvailable, places, storageError } = usePlaces();
   const [selectedStatus, setSelectedStatus] = useState<PlaceStatusFilter>('all');
   const [selectedTagId, setSelectedTagId] = useState<string | null>(null);
-  const tagFilterOptions = useMemo(
-    () => getAssignedTagFilterOptions(places, availableTags),
-    [availableTags, places]
-  );
+  const tagFilterOptions = useMemo(() => getAssignedTagFilterOptions(places, availableTags), [availableTags, places]);
   const selectedTag = tagFilterOptions.find((tag) => tag.id === selectedTagId) ?? null;
 
   useEffect(() => {
-    if (selectedTagId !== null && selectedTag === null) {
-      setSelectedTagId(null);
-    }
+    if (selectedTagId !== null && selectedTag === null) setSelectedTagId(null);
   }, [selectedTag, selectedTagId]);
 
-  const filteredPlaces = useMemo(
-    () =>
-      places.filter((place) =>
-        matchesPlacesScreenFilters(place, selectedStatus, selectedTag?.name ?? null)
-      ),
-    [places, selectedStatus, selectedTag?.name]
-  );
+  const filteredPlaces = useMemo(() => places.filter((place) => matchesPlacesScreenFilters(place, selectedStatus, selectedTag?.name ?? null)), [places, selectedStatus, selectedTag?.name]);
 
   return (
     <View style={styles.screen}>
-      <View style={styles.header}>
-        <View>
-          <Text style={styles.eyebrow}>Saved from Instagram</Text>
-          <Text style={styles.title}>Places</Text>
-        </View>
-        <View style={styles.headerActions}>
-          <AppButton
-            label="Account"
-            onPress={() => navigation.navigate({ name: 'Account' })}
-            style={styles.accountButton}
-            variant="ghost"
-          />
-          <AppButton
-            disabled={!isStorageAvailable}
-            label="Add"
-            onPress={() => navigation.navigate({ name: 'AddPlace' })}
-            style={styles.addButton}
-          />
-        </View>
-      </View>
-
-      <FilterBar selectedStatus={selectedStatus} onStatusChange={setSelectedStatus} />
-      <TagFilterBar
-        tags={tagFilterOptions}
-        selectedTagId={selectedTag?.id ?? null}
-        onTagChange={setSelectedTagId}
-      />
-
-      {storageError ? <StorageErrorBanner message={storageError} /> : null}
-
-      {isLoading ? (
-        <View style={styles.loadingState}>
-          <ActivityIndicator color={colors.primary} />
-          <Text style={styles.loadingText}>Loading saved places...</Text>
-        </View>
-      ) : (
-        <FlatList
-          contentContainerStyle={styles.listContent}
-          data={filteredPlaces}
-          keyExtractor={(place) => place.id}
-          ListEmptyComponent={
-            <View style={styles.emptyState}>
-              <Text style={styles.emptyTitle}>No places match these filters.</Text>
-              <Text style={styles.emptyBody}>Choose another tag or loosen the status filter.</Text>
+      <FlatList
+        contentContainerStyle={styles.listContent}
+        contentInsetAdjustmentBehavior="automatic"
+        data={isLoading ? [] : filteredPlaces}
+        keyExtractor={(place) => place.id}
+        ListHeaderComponent={
+          <View style={styles.headerStack}>
+            <View style={styles.masthead}>
+              <View style={styles.brandBlock}>
+                <Text style={styles.wordmark}>PROJECT LEMONADE</Text>
+                <Text style={styles.libraryMeta}>{places.length} saved {places.length === 1 ? 'place' : 'places'}</Text>
+              </View>
+              <View style={styles.headerActions}>
+                <AppButton compact label="Account" onPress={() => navigation.navigate({ name: 'Account' })} variant="ghost" />
+                <AppButton compact disabled={!isStorageAvailable} label="Add place" onPress={() => navigation.navigate({ name: 'AddPlace' })} />
+              </View>
             </View>
-          }
-          renderItem={({ item }) => (
-            <PlaceCardRow
-              place={item}
-              onPress={() =>
-                navigation.navigate({ name: 'PlaceDetail', placeId: item.id })
-              }
-            />
-          )}
-        />
-      )}
+            <Text adjustsFontSizeToFit numberOfLines={1} style={styles.title}>PLACES</Text>
+            <View style={styles.filters}>
+              <FilterBar selectedStatus={selectedStatus} onStatusChange={setSelectedStatus} />
+              <TagFilterBar tags={tagFilterOptions} selectedTagId={selectedTag?.id ?? null} onTagChange={setSelectedTagId} />
+            </View>
+            {storageError ? <StorageErrorBanner message={storageError} /> : null}
+            {isLoading ? <StatePanel loading title="Loading saved places" /> : null}
+            {!isLoading ? <Text style={styles.indexLabel}>Saved index / {filteredPlaces.length}</Text> : null}
+          </View>
+        }
+        ListEmptyComponent={isLoading ? null : <StatePanel title="No matching places" body="Choose another tag or loosen the status filter." />}
+        renderItem={({ item }) => <PlaceCardRow place={item} onPress={() => navigation.navigate({ name: 'PlaceDetail', placeId: item.id })} />}
+      />
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  screen: {
-    backgroundColor: colors.background,
-    flex: 1,
-    gap: spacing.lg,
-    padding: spacing.lg
-  },
-  header: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    justifyContent: 'space-between'
-  },
-  eyebrow: {
-    color: colors.muted,
-    fontSize: 13,
-    fontWeight: '700',
-    textTransform: 'uppercase'
-  },
-  title: {
-    color: colors.text,
-    fontSize: 34,
-    fontWeight: '900'
-  },
-  headerActions: {
-    alignItems: 'center',
-    flexDirection: 'row',
-    gap: spacing.xs
-  },
-  accountButton: {
-    minHeight: 44,
-    paddingHorizontal: spacing.sm
-  },
-  addButton: {
-    minHeight: 44,
-    minWidth: 68,
-    paddingHorizontal: spacing.md
-  },
-  listContent: {
-    gap: spacing.md,
-    paddingBottom: spacing.xxl
-  },
-  loadingState: {
-    alignItems: 'center',
-    flex: 1,
-    gap: spacing.md,
-    justifyContent: 'center'
-  },
-  loadingText: {
-    color: colors.muted,
-    fontSize: 15,
-    fontWeight: '700'
-  },
-  emptyState: {
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: 8,
-    borderWidth: 1,
-    gap: spacing.sm,
-    padding: spacing.xl
-  },
-  emptyTitle: {
-    color: colors.text,
-    fontSize: 18,
-    fontWeight: '800',
-    textAlign: 'center'
-  },
-  emptyBody: {
-    color: colors.muted,
-    fontSize: 15,
-    textAlign: 'center'
-  }
+const createStyles = (theme: AppTheme) => StyleSheet.create({
+  screen: { backgroundColor: theme.colors.background, flex: 1 },
+  listContent: { paddingBottom: theme.spacing.huge, paddingHorizontal: theme.spacing.lg },
+  headerStack: { gap: theme.spacing.xl, paddingBottom: theme.spacing.lg, paddingTop: theme.spacing.sm },
+  masthead: { alignItems: 'center', borderBottomColor: theme.colors.border, borderBottomWidth: 1, flexDirection: 'row', gap: theme.spacing.sm, justifyContent: 'space-between', paddingBottom: theme.spacing.sm },
+  brandBlock: { flex: 1, gap: theme.spacing.xxs },
+  wordmark: { color: theme.colors.text, fontFamily: theme.typography.displayFamily, fontSize: 18, letterSpacing: 0.8, lineHeight: 21 },
+  libraryMeta: { color: theme.colors.textMuted, fontSize: theme.typography.label.small, fontWeight: '700' },
+  headerActions: { alignItems: 'center', flexDirection: 'row', gap: theme.spacing.xs },
+  title: { color: theme.colors.text, fontFamily: theme.typography.displayFamily, fontSize: 72, letterSpacing: -1.6, lineHeight: 72 },
+  filters: { gap: theme.spacing.lg },
+  indexLabel: { color: theme.colors.textMuted, fontSize: theme.typography.label.small, fontWeight: '900', letterSpacing: 1.3, textTransform: 'uppercase' }
 });

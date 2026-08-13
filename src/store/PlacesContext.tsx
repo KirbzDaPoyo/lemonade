@@ -1,9 +1,11 @@
 import {
   createContext,
   ReactNode,
+  useCallback,
   useContext,
   useEffect,
   useMemo,
+  useRef,
   useState
 } from 'react';
 
@@ -27,13 +29,22 @@ type PlacesContextValue = {
   createTag: (name: string) => Promise<PlaceTag | undefined>;
   renameTag: (id: string, name: string) => Promise<boolean>;
   deleteTag: (id: string) => Promise<boolean>;
+  retryStorage: () => void;
 };
 
 const PlacesContext = createContext<PlacesContextValue | undefined>(undefined);
 
 const makeId = () => `place-${Date.now()}-${Math.random().toString(36).slice(2, 8)}`;
-const getErrorMessage = (fallback: string, error: unknown) =>
-  error instanceof Error ? error.message : fallback;
+const getStorageErrorMessage = (fallback: string, error: unknown) => {
+  if (
+    error instanceof Error &&
+    /jwt(?:\s+issued\s+at\s+future|\s+not\s+yet\s+valid)/i.test(error.message)
+  ) {
+    return 'Your private library is still connecting. Please retry in a moment.';
+  }
+
+  return fallback;
+};
 const sortTags = (tags: PlaceTag[]) =>
   [...tags].sort((left, right) => left.name.localeCompare(right.name));
 
@@ -46,15 +57,19 @@ export function PlacesProvider({
   children: ReactNode;
   userId: string;
 }) {
+  const accessTokenProviderRef = useRef(accessTokenProvider);
+  accessTokenProviderRef.current = accessTokenProvider;
   const repositoryConfiguration = useMemo(
-    () => createSavedPlacesRepository(userId, accessTokenProvider),
-    [accessTokenProvider, userId]
+    () => createSavedPlacesRepository(userId, () => accessTokenProviderRef.current()),
+    [userId]
   );
   const { repository, error: configurationError } = repositoryConfiguration;
   const [places, setPlaces] = useState<PlaceCard[]>([]);
   const [availableTags, setAvailableTags] = useState<PlaceTag[]>([]);
   const [isLoading, setIsLoading] = useState(Boolean(repository));
   const [storageError, setStorageError] = useState<string | undefined>(configurationError);
+  const [hydrationAttempt, setHydrationAttempt] = useState(0);
+  const hasHydratedRef = useRef(false);
 
   useEffect(() => {
     let isMounted = true;
@@ -64,28 +79,40 @@ export function PlacesProvider({
         return;
       }
 
-      try {
-        const [savedPlaces, savedTags] = await Promise.all([
-          repository.listPlaces(),
-          repository.listTags()
-        ]);
-
-        if (!isMounted) {
-          return;
-        }
-
-        setPlaces(savedPlaces);
-        setAvailableTags(sortTags(savedTags));
-        setStorageError(undefined);
-      } catch (error) {
-        if (isMounted) {
-          setStorageError(getErrorMessage('Saved places could not be loaded.', error));
-        }
-      } finally {
-        if (isMounted) {
-          setIsLoading(false);
-        }
+      if (!hasHydratedRef.current) {
+        setIsLoading(true);
       }
+      const [placesResult, tagsResult] = await Promise.allSettled([
+        repository.listPlaces(),
+        repository.listTags()
+      ]);
+
+      if (!isMounted) {
+        return;
+      }
+
+      if (placesResult.status === 'fulfilled') {
+        setPlaces(placesResult.value);
+      }
+
+      if (tagsResult.status === 'fulfilled') {
+        setAvailableTags(sortTags(tagsResult.value));
+      }
+
+      if (placesResult.status === 'fulfilled' && tagsResult.status === 'fulfilled') {
+        setStorageError(undefined);
+      } else {
+        const rejectedResult = placesResult.status === 'rejected' ? placesResult : tagsResult;
+        setStorageError(
+          getStorageErrorMessage(
+            'Some library data could not be loaded. Retry to reconnect.',
+            rejectedResult.status === 'rejected' ? rejectedResult.reason : undefined
+          )
+        );
+      }
+
+      hasHydratedRef.current = true;
+      setIsLoading(false);
     };
 
     void hydratePlaces();
@@ -93,6 +120,13 @@ export function PlacesProvider({
     return () => {
       isMounted = false;
     };
+  }, [hydrationAttempt, repository]);
+
+  const retryStorage = useCallback(() => {
+    if (repository) {
+      setStorageError(undefined);
+      setHydrationAttempt((attempt) => attempt + 1);
+    }
   }, [repository]);
 
   const value = useMemo<PlacesContextValue>(
@@ -102,6 +136,7 @@ export function PlacesProvider({
       isLoading,
       isStorageAvailable: Boolean(repository),
       storageError,
+      retryStorage,
       addPlace: async (place) => {
         if (!repository) {
           setStorageError(configurationError);
@@ -123,7 +158,7 @@ export function PlacesProvider({
           setStorageError(undefined);
           return persistedPlace;
         } catch (error) {
-          setStorageError(getErrorMessage('Saved place could not be created.', error));
+          setStorageError(getStorageErrorMessage('Saved place could not be created. Retry in a moment.', error));
           return undefined;
         }
       },
@@ -142,7 +177,7 @@ export function PlacesProvider({
           setStorageError(undefined);
           return true;
         } catch (error) {
-          setStorageError(getErrorMessage('Saved place could not be updated.', error));
+          setStorageError(getStorageErrorMessage('Saved place could not be updated. Retry in a moment.', error));
           return false;
         }
       },
@@ -158,7 +193,7 @@ export function PlacesProvider({
           setStorageError(undefined);
           return true;
         } catch (error) {
-          setStorageError(getErrorMessage('Saved place could not be deleted.', error));
+          setStorageError(getStorageErrorMessage('Saved place could not be deleted. Retry in a moment.', error));
           return false;
         }
       },
@@ -174,7 +209,7 @@ export function PlacesProvider({
           setStorageError(undefined);
           return createdTag;
         } catch (error) {
-          setStorageError(getErrorMessage('Tag could not be created.', error));
+          setStorageError(getStorageErrorMessage('Tag could not be created. Retry in a moment.', error));
           return undefined;
         }
       },
@@ -211,7 +246,7 @@ export function PlacesProvider({
           setStorageError(undefined);
           return true;
         } catch (error) {
-          setStorageError(getErrorMessage('Tag could not be renamed.', error));
+          setStorageError(getStorageErrorMessage('Tag could not be renamed. Retry in a moment.', error));
           return false;
         }
       },
@@ -242,12 +277,12 @@ export function PlacesProvider({
           setStorageError(undefined);
           return true;
         } catch (error) {
-          setStorageError(getErrorMessage('Tag could not be deleted.', error));
+          setStorageError(getStorageErrorMessage('Tag could not be deleted. Retry in a moment.', error));
           return false;
         }
       }
     }),
-    [availableTags, configurationError, isLoading, places, repository, storageError]
+    [availableTags, configurationError, isLoading, places, repository, retryStorage, storageError]
   );
 
   return <PlacesContext.Provider value={value}>{children}</PlacesContext.Provider>;

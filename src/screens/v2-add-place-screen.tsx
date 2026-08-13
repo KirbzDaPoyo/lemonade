@@ -1,19 +1,19 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 
-import { AppButton } from '../components/AppButton';
-import { AppTextField } from '../components/app-text-field';
-import { ScreenHeader } from '../components/screen-header';
+import { HazardStrip } from '../components/v2-marks';
+import { V2Button, V2TextField } from '../components/v2-controls';
+import { V2Console, V2TitleBlock, V2TopBar } from '../components/v2-layout';
 import { getDefaultGeoContext } from '../config/geoContext';
 import { AppTheme, useAppTheme } from '../design-system/theme';
-import { AppNavigation } from '../navigation/types';
+import type { AppNavigation } from '../navigation/types';
 import { extractInstagramUrl } from '../services/incomingShare/instagramUrl';
 import { instagramImportProvider } from '../services/instagramImport';
 import { placeExtractionService } from '../services/placeExtraction';
 import { placeSearchService } from '../services/placeSearch';
-import { PlaceExtractionResult, PlaceSearchCandidate } from '../types/extraction';
+import type { PlaceExtractionResult, PlaceSearchCandidate } from '../types/extraction';
 
-type AddPlaceScreenProps = { navigation: AppNavigation; initialInstagramUrl?: string };
+type V2AddPlaceScreenProps = { navigation: AppNavigation; initialInstagramUrl?: string };
 
 const isInstagramUrl = (value: string) => {
   try {
@@ -29,7 +29,7 @@ const prioritizeManualSearch = (extraction: PlaceExtractionResult, manualPlaceNa
   return [{ query: userHint, reason: 'manual correction', confidence: 1, parsedPlaceName: userHint, sourceSignal: 'user_hint' }, ...extraction.searchCandidates.filter((candidate) => candidate.sourceSignal !== 'user_hint')];
 };
 
-export function AddPlaceScreen({ navigation, initialInstagramUrl }: AddPlaceScreenProps) {
+export function V2AddPlaceScreen({ navigation, initialInstagramUrl }: V2AddPlaceScreenProps) {
   const { theme } = useAppTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const [sourceInstagramUrl, setSourceInstagramUrl] = useState(initialInstagramUrl ?? '');
@@ -39,7 +39,18 @@ export function AddPlaceScreen({ navigation, initialInstagramUrl }: AddPlaceScre
   const isMountedRef = useRef(true);
 
   useEffect(() => { isMountedRef.current = true; return () => { isMountedRef.current = false; }; }, []);
-  const canSearch = sourceInstagramUrl.trim().length > 0 && !isFindingPlace && (!needsManualQuery || manualPlaceName.trim().length > 0);
+  const extractedUrl = extractInstagramUrl(sourceInstagramUrl);
+  const hasEnteredUrl = sourceInstagramUrl.trim().length > 0;
+  const hasValidUrl = Boolean(extractedUrl && isInstagramUrl(extractedUrl));
+  const canSearch = hasValidUrl && !isFindingPlace && (!needsManualQuery || manualPlaceName.trim().length > 0);
+  const consoleTitle = isFindingPlace ? 'IMPORTING...' : !hasEnteredUrl ? 'READY FOR URL' : hasValidUrl ? 'URL READY' : 'CHECK URL';
+  const consoleBody = isFindingPlace
+    ? 'Searching for matching places.'
+    : !hasEnteredUrl
+      ? 'Paste a public Instagram post or reel to begin.'
+      : hasValidUrl
+        ? 'Review the URL, then find matching places.'
+        : 'Use a public Instagram post or reel URL.';
 
   const navigateToCandidates = async (extraction: PlaceExtractionResult, searchQuery: string, instagramUrl: string) => {
     const candidates = await placeSearchService.searchPlaces({ query: searchQuery, searchCandidates: prioritizeManualSearch(extraction, manualPlaceName), geoContext: extraction.geoContext });
@@ -48,7 +59,16 @@ export function AddPlaceScreen({ navigation, initialInstagramUrl }: AddPlaceScre
   };
 
   const buildManualExtraction = (): PlaceExtractionResult => ({
-    placeName: manualPlaceName.trim() || null, areaOrCity: null, category: null, cuisineOrSpecialty: null, recommendedItems: [], vibeTags: ['manual-search'], searchQuery: manualPlaceName.trim(), searchCandidates: manualPlaceName.trim() ? [{ query: manualPlaceName.trim(), reason: 'manual search', confidence: 1, parsedPlaceName: manualPlaceName.trim(), sourceSignal: 'user_hint' }] : [], geoContext: getDefaultGeoContext(), confidence: manualPlaceName.trim() ? 1 : 0
+    placeName: manualPlaceName.trim() || null,
+    areaOrCity: null,
+    category: null,
+    cuisineOrSpecialty: null,
+    recommendedItems: [],
+    vibeTags: ['manual-search'],
+    searchQuery: manualPlaceName.trim(),
+    searchCandidates: manualPlaceName.trim() ? [{ query: manualPlaceName.trim(), reason: 'manual search', confidence: 1, parsedPlaceName: manualPlaceName.trim(), sourceSignal: 'user_hint' }] : [],
+    geoContext: getDefaultGeoContext(),
+    confidence: manualPlaceName.trim() ? 1 : 0
   });
 
   const handleFindPlace = async (requestedUrl = sourceInstagramUrl) => {
@@ -98,23 +118,42 @@ export function AddPlaceScreen({ navigation, initialInstagramUrl }: AddPlaceScre
   return (
     <KeyboardAvoidingView behavior={Platform.OS === 'ios' ? 'padding' : undefined} style={styles.screen}>
       <ScrollView contentContainerStyle={styles.content} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled">
-        <ScreenHeader onBack={navigation.goBack} title="Add Place" />
-        <View style={styles.intro}>
-          <Text style={styles.title}>IMPORT A PLACE</Text>
-          <Text style={styles.introBody}>Paste a public Instagram post or reel. You will confirm the matching place before anything is saved.</Text>
-        </View>
-        <View style={styles.form}>
-          <AppTextField autoCapitalize="none" autoCorrect={false} keyboardType="url" label="Instagram reel or post URL" onChangeText={setSourceInstagramUrl} placeholder="https://www.instagram.com/reel/..." value={sourceInstagramUrl} />
-          {needsManualQuery ? (
-            <View style={styles.promptBox}>
-              <Text style={styles.promptTitle}>Search hint needed</Text>
-              <Text style={styles.promptText}>I could not identify the place from this reel. Tell me what to search.</Text>
+        <V2TopBar onBack={navigation.goBack} />
+        <V2TitleBlock title="ADD PLACE" />
+        <V2TextField
+          autoCapitalize="none"
+          autoCorrect={false}
+          keyboardType="url"
+          label="Instagram URL"
+          onChangeText={setSourceInstagramUrl}
+          placeholder="https://www.instagram.com/reel/..."
+          value={sourceInstagramUrl}
+        />
+        <V2TextField
+          autoCapitalize="words"
+          hint="Adding a name can help us find the right match when Instagram details are limited."
+          label={needsManualQuery ? 'Place name — required' : 'Place name — optional'}
+          onChangeText={setManualPlaceName}
+          placeholder="e.g. Neon Noodles"
+          value={manualPlaceName}
+        />
+        {needsManualQuery ? (
+          <View style={styles.recoveryNotice}>
+            <Text style={styles.recoveryTitle}>SEARCH HINT NEEDED</Text>
+            <Text style={styles.recoveryBody}>Instagram did not expose enough place information. Enter a place name and search again.</Text>
+          </View>
+        ) : null}
+        <V2Button disabled={!canSearch} label={isFindingPlace ? 'FINDING PLACE' : 'FIND PLACE'} onPress={() => void handleFindPlace()} />
+        <V2Console label="Import status">
+          <View accessibilityLiveRegion="polite" style={styles.progressRow}>
+            {isFindingPlace ? <ActivityIndicator color={theme.colors.acidInk} /> : <View style={[styles.readyIndicator, hasEnteredUrl && !hasValidUrl && styles.invalidIndicator]} />}
+            <View style={styles.progressCopy}>
+              <Text style={styles.progressTitle}>{consoleTitle}</Text>
+              <Text style={styles.progressBody}>{consoleBody}</Text>
             </View>
-          ) : null}
-          {needsManualQuery ? <AppTextField autoCapitalize="words" label="Place name or search" onChangeText={setManualPlaceName} placeholder="Lemon House Cafe" value={manualPlaceName} /> : null}
-          <AppButton disabled={!canSearch} label={isFindingPlace ? 'Finding the place' : 'Find the place'} onPress={() => void handleFindPlace()} />
-          {isFindingPlace ? <View style={styles.progress}><ActivityIndicator color={theme.colors.primary} /><Text style={styles.progressText}>Importing and matching</Text></View> : null}
-        </View>
+          </View>
+        </V2Console>
+        <View style={styles.footer}><HazardStrip /></View>
       </ScrollView>
     </KeyboardAvoidingView>
   );
@@ -122,14 +161,15 @@ export function AddPlaceScreen({ navigation, initialInstagramUrl }: AddPlaceScre
 
 const createStyles = (theme: AppTheme) => StyleSheet.create({
   screen: { backgroundColor: theme.colors.background, flex: 1 },
-  content: { gap: theme.spacing.xl, padding: theme.spacing.lg, paddingBottom: theme.spacing.huge },
-  intro: { gap: theme.spacing.md, paddingTop: theme.spacing.sm },
-  title: { color: theme.colors.text, fontFamily: theme.typography.displayFamily, fontSize: theme.typography.display.screen, letterSpacing: -0.4, lineHeight: 42 },
-  introBody: { color: theme.colors.textMuted, fontSize: theme.typography.body.large, lineHeight: 24, maxWidth: 560 },
-  form: { backgroundColor: theme.colors.surface, borderTopColor: theme.colors.border, borderTopWidth: 1, gap: theme.spacing.xl, paddingHorizontal: theme.spacing.lg, paddingVertical: theme.spacing.xl },
-  promptBox: { backgroundColor: theme.colors.warningSurface, borderColor: theme.colors.warning, borderRadius: theme.radii.sm, borderWidth: 1, gap: theme.spacing.xs, padding: theme.spacing.lg },
-  promptTitle: { color: theme.colors.warning, fontFamily: theme.typography.displayFamily, fontSize: 18, textTransform: 'uppercase' },
-  promptText: { color: theme.colors.text, fontSize: theme.typography.body.medium, lineHeight: 21 },
-  progress: { alignItems: 'center', flexDirection: 'row', gap: theme.spacing.md, justifyContent: 'center' },
-  progressText: { color: theme.colors.textMuted, fontSize: theme.typography.body.small, fontWeight: '700' }
+  content: { gap: theme.spacing.xl, padding: theme.spacing.lg, paddingBottom: theme.spacing.xxl },
+  recoveryNotice: { backgroundColor: theme.colors.warningSurface, borderColor: theme.colors.warning, borderWidth: 1, gap: theme.spacing.xs, padding: theme.spacing.md },
+  recoveryTitle: { color: theme.colors.warning, fontFamily: theme.typography.displayFamily, fontSize: 15, letterSpacing: 0.8 },
+  recoveryBody: { color: theme.colors.text, fontSize: theme.typography.body.small, lineHeight: 18 },
+  progressRow: { alignItems: 'center', flexDirection: 'row', gap: theme.spacing.md, minHeight: 50 },
+  readyIndicator: { borderColor: theme.colors.acidBorder, borderRadius: 13, borderWidth: 2, height: 26, width: 26 },
+  invalidIndicator: { borderColor: theme.colors.warning },
+  progressCopy: { flex: 1, gap: theme.spacing.xxs },
+  progressTitle: { color: theme.colors.text, fontFamily: theme.typography.displayFamily, fontSize: 15, letterSpacing: 0.7 },
+  progressBody: { color: theme.colors.textMuted, fontSize: theme.typography.body.small, lineHeight: 18 },
+  footer: { borderTopColor: theme.colors.border, borderTopWidth: 1, paddingTop: theme.spacing.lg }
 });

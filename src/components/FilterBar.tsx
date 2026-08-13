@@ -1,7 +1,7 @@
-import { useState } from 'react';
+import { useMemo, useState } from 'react';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 
-import { colors, radii, spacing } from '../theme';
+import { AppTheme, useAppTheme } from '../design-system/theme';
 import type { PlaceStatusFilter } from '../types/filters';
 import { favoriteLabel, statusLabels } from '../utils/labels';
 
@@ -19,6 +19,8 @@ const statusOptions: Array<{ value: PlaceStatusFilter; label: string }> = [
 ];
 
 export function FilterBar({ selectedStatus, onStatusChange }: FilterBarProps) {
+  const { theme } = useAppTheme();
+  const styles = useMemo(() => createStyles(theme), [theme]);
   const [isOpen, setIsOpen] = useState(false);
   const selectedLabel =
     statusOptions.find((option) => option.value === selectedStatus)?.label ?? 'Status';
@@ -30,7 +32,7 @@ export function FilterBar({ selectedStatus, onStatusChange }: FilterBarProps) {
 
   return (
     <View style={styles.dropdown}>
-      <Text style={styles.dropdownLabel}>Status</Text>
+      <Text style={styles.dropdownLabel}>Status filter</Text>
       <Pressable
         accessibilityLabel={`Status: ${selectedLabel}`}
         accessibilityRole="button"
@@ -38,14 +40,12 @@ export function FilterBar({ selectedStatus, onStatusChange }: FilterBarProps) {
         onPress={() => setIsOpen((current) => !current)}
         style={({ pressed }) => [styles.dropdownButton, pressed && styles.pressed]}
       >
-        <Text numberOfLines={1} style={styles.dropdownValue}>
-          {selectedLabel}
-        </Text>
-        <Text style={styles.chevron}>{isOpen ? '^' : 'v'}</Text>
+        <Text numberOfLines={1} style={styles.dropdownValue}>{selectedLabel}</Text>
+        <Text style={styles.toggleLabel}>{isOpen ? 'CLOSE' : 'OPEN'}</Text>
       </Pressable>
       {isOpen ? (
         <View style={styles.menu}>
-          {statusOptions.map((option) => {
+          {statusOptions.map((option, index) => {
             const selected = option.value === selectedStatus;
 
             return (
@@ -57,6 +57,7 @@ export function FilterBar({ selectedStatus, onStatusChange }: FilterBarProps) {
                 onPress={() => selectStatus(option.value)}
                 style={({ pressed }) => [
                   styles.menuItem,
+                  index < statusOptions.length - 1 && styles.menuDivider,
                   selected && styles.selectedMenuItem,
                   pressed && styles.pressed
                 ]}
@@ -73,68 +74,61 @@ export function FilterBar({ selectedStatus, onStatusChange }: FilterBarProps) {
   );
 }
 
-const styles = StyleSheet.create({
-  dropdown: {
-    gap: spacing.xs
-  },
-  dropdownLabel: {
-    color: colors.muted,
-    fontSize: 12,
-    fontWeight: '900',
-    textTransform: 'uppercase'
-  },
-  dropdownButton: {
-    alignItems: 'center',
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: radii.md,
-    borderWidth: 1,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-    minHeight: 44,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm
-  },
-  dropdownValue: {
-    color: colors.text,
-    flex: 1,
-    fontSize: 15,
-    fontWeight: '800'
-  },
-  chevron: {
-    color: colors.primary,
-    fontSize: 12,
-    fontWeight: '900',
-    marginLeft: spacing.md
-  },
-  menu: {
-    backgroundColor: colors.surface,
-    borderColor: colors.border,
-    borderRadius: radii.md,
-    borderWidth: 1,
-    overflow: 'hidden'
-  },
-  menuItem: {
-    borderBottomColor: colors.border,
-    borderBottomWidth: 1,
-    justifyContent: 'center',
-    minHeight: 42,
-    paddingHorizontal: spacing.md,
-    paddingVertical: spacing.sm
-  },
-  selectedMenuItem: {
-    backgroundColor: colors.surfaceMuted
-  },
-  menuItemText: {
-    color: colors.text,
-    fontSize: 15,
-    fontWeight: '700'
-  },
-  selectedMenuItemText: {
-    color: colors.primary,
-    fontWeight: '900'
-  },
-  pressed: {
-    opacity: 0.82
-  }
-});
+const createStyles = (theme: AppTheme) =>
+  StyleSheet.create({
+    dropdown: { gap: theme.spacing.xs },
+    dropdownLabel: {
+      color: theme.colors.textMuted,
+      fontSize: theme.typography.label.small,
+      fontWeight: '900',
+      letterSpacing: 1.2,
+      textTransform: 'uppercase'
+    },
+    dropdownButton: {
+      alignItems: 'center',
+      backgroundColor: theme.colors.surface,
+      borderColor: theme.colors.borderStrong,
+      borderRadius: theme.radii.sm,
+      borderWidth: 1,
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+      minHeight: 48,
+      paddingHorizontal: theme.spacing.lg
+    },
+    dropdownValue: {
+      color: theme.colors.text,
+      flex: 1,
+      fontSize: theme.typography.body.medium,
+      fontWeight: '800'
+    },
+    toggleLabel: {
+      color: theme.colors.cobalt,
+      fontSize: theme.typography.label.small,
+      fontWeight: '900',
+      letterSpacing: 1
+    },
+    menu: {
+      backgroundColor: theme.colors.surfaceElevated,
+      borderColor: theme.colors.borderStrong,
+      borderRadius: theme.radii.sm,
+      borderWidth: 1,
+      overflow: 'hidden'
+    },
+    menuItem: {
+      justifyContent: 'center',
+      minHeight: 48,
+      paddingHorizontal: theme.spacing.lg
+    },
+    menuDivider: {
+      borderBottomColor: theme.colors.border,
+      borderBottomWidth: 1
+    },
+    selectedMenuItem: { backgroundColor: theme.colors.primarySoft },
+    menuItemText: {
+      color: theme.colors.text,
+      fontSize: theme.typography.body.medium,
+      fontWeight: '700'
+    },
+    selectedMenuItemText: { color: theme.colors.text, fontWeight: '900' },
+    pressed: { opacity: 0.72 }
+  });

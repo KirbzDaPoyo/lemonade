@@ -1,12 +1,12 @@
 import { useEffect, useRef, useState } from 'react';
-import { Alert } from 'react-native';
+import { Alert, BackHandler } from 'react-native';
 import { useShareIntentContext } from 'expo-share-intent';
 
 import { AccountScreen } from '../screens/AccountScreen';
-import { AddPlaceScreen } from '../screens/AddPlaceScreen';
-import { CandidateMatchScreen } from '../screens/CandidateMatchScreen';
-import { HomeScreen } from '../screens/HomeScreen';
-import { PlaceDetailScreen } from '../screens/PlaceDetailScreen';
+import { V2AddPlaceScreen } from '../screens/v2-add-place-screen';
+import { V2CandidateMatchScreen } from '../screens/v2-candidate-match-screen';
+import { V2HomeScreen } from '../screens/v2-home-screen';
+import { V2PlaceDetailScreen } from '../screens/v2-place-detail-screen';
 import { extractInstagramUrl } from '../services/incomingShare/instagramUrl';
 import { AppNavigation, AppRoute } from './types';
 
@@ -66,6 +66,19 @@ export function AppNavigator() {
     }
   }, [error]);
 
+  useEffect(() => {
+    const subscription = BackHandler.addEventListener('hardwareBackPress', () => {
+      if (stack.length <= 1) return false;
+
+      setStack((currentStack) =>
+        currentStack.length > 1 ? currentStack.slice(0, -1) : currentStack
+      );
+      return true;
+    });
+
+    return () => subscription.remove();
+  }, [stack.length]);
+
   const navigation: AppNavigation = {
     navigate: (route) => setStack((currentStack) => [...currentStack, route]),
     replace: (route) =>
@@ -83,7 +96,7 @@ export function AppNavigator() {
 
   if (currentRoute.name === 'AddPlace') {
     return (
-      <AddPlaceScreen
+      <V2AddPlaceScreen
         initialInstagramUrl={currentRoute.initialInstagramUrl}
         key={currentRoute.shareRequestId ?? 'manual-add-place'}
         navigation={navigation}
@@ -93,7 +106,7 @@ export function AppNavigator() {
 
   if (currentRoute.name === 'CandidateMatch') {
     return (
-      <CandidateMatchScreen
+      <V2CandidateMatchScreen
         candidates={currentRoute.candidates}
         draft={currentRoute.draft}
         navigation={navigation}
@@ -102,8 +115,8 @@ export function AppNavigator() {
   }
 
   if (currentRoute.name === 'PlaceDetail') {
-    return <PlaceDetailScreen navigation={navigation} placeId={currentRoute.placeId} />;
+    return <V2PlaceDetailScreen navigation={navigation} placeId={currentRoute.placeId} />;
   }
 
-  return <HomeScreen navigation={navigation} />;
+  return <V2HomeScreen navigation={navigation} />;
 }
