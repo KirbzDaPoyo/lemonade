@@ -7,6 +7,7 @@ import { PlaceGlyph } from '../components/v2-marks';
 import { V2TitleBlock, V2TopBar } from '../components/v2-layout';
 import { AppTheme, useAppTheme } from '../design-system/theme';
 import type { AppNavigation } from '../navigation/types';
+import { analytics } from '../observability/analytics';
 import type { PlaceInput } from '../repositories/savedPlaces/types';
 import { resolveCandidatePlaceCategory } from '../services/classification/place-category-resolver';
 import { suggestUserTags } from '../services/tags/user-tags';
@@ -36,8 +37,10 @@ export function V2CandidateMatchScreen({ navigation, draft, candidates }: V2Cand
     setSavingKey(saveKey);
     try {
       const savedPlace = await save();
-      if (savedPlace) navigation.replace({ name: 'PlaceDetail', placeId: savedPlace.id });
-      else Alert.alert('Save failed', failureMessage);
+      if (savedPlace) {
+        analytics.placeSaved(savedPlace.status);
+        navigation.replace({ name: 'PlaceDetail', placeId: savedPlace.id });
+      } else Alert.alert('Save failed', failureMessage);
     } finally {
       saveInFlightRef.current = false;
       setSavingKey(undefined);
@@ -72,7 +75,10 @@ export function V2CandidateMatchScreen({ navigation, draft, candidates }: V2Cand
             candidate={item}
             disabled={Boolean(savingKey)}
             index={index}
-            onPress={() => setSelectedCandidateId(item.providerPlaceId)}
+            onPress={() => {
+              analytics.candidateSelected(index + 1);
+              setSelectedCandidateId(item.providerPlaceId);
+            }}
             selected={selectedCandidateId === item.providerPlaceId}
           />
         )}

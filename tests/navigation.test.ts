@@ -64,6 +64,13 @@ test('transient import state clears between shared and manual add flows', () => 
   assert.equal(manualState.requestId, sharedState.requestId + 1);
 });
 
+test('external HTTPS links open directly without an Android capability preflight', () => {
+  const detailScreen = readFileSync('src/screens/v2-place-detail-screen.tsx', 'utf8');
+
+  assert.match(detailScreen, /await Linking\.openURL\(url\)/);
+  assert.doesNotMatch(detailScreen, /Linking\.canOpenURL/);
+});
+
 test('only durable place IDs are encoded in route parameters', () => {
   assert.deepEqual(getPlaceDetailHref('place-123'), {
     pathname: '/place/[placeId]',

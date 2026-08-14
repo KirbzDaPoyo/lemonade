@@ -8,6 +8,7 @@ import { EnergySlash } from '../components/v2-marks';
 import { V2PlaceRow } from '../components/v2-place-row';
 import { AppTheme, useAppTheme } from '../design-system/theme';
 import type { AppNavigation } from '../navigation/types';
+import { analytics } from '../observability/analytics';
 import { getAssignedTagFilterOptions, matchesPlacesScreenFilters } from '../services/placeFilters';
 import { usePlaces } from '../store/PlacesContext';
 import type { PlaceStatusFilter } from '../types/filters';
@@ -68,7 +69,10 @@ export function V2HomeScreen({ navigation }: V2HomeScreenProps) {
                 accessibilityRole="button"
                 accessibilityState={{ disabled: !isStorageAvailable }}
                 disabled={!isStorageAvailable}
-                onPress={() => navigation.navigate({ name: 'AddPlace' })}
+                onPress={() => {
+                  analytics.manualAddOpened();
+                  navigation.navigate({ name: 'AddPlace' });
+                }}
                 style={({ pressed }) => [styles.addButton, !isStorageAvailable && styles.disabled, pressed && styles.pressed]}
               >
                 <Text style={styles.addPlus}>+</Text>
@@ -92,7 +96,14 @@ export function V2HomeScreen({ navigation }: V2HomeScreenProps) {
         ListEmptyComponent={isInitialLoading ? null : <StatePanel title="No matching places" body="Choose another tag or loosen the status filter." />}
         ListFooterComponent={<View style={styles.footerEnergy}><EnergySlash /></View>}
         renderItem={({ item, index }) => (
-          <V2PlaceRow index={index + 1} onPress={() => navigation.navigate({ name: 'PlaceDetail', placeId: item.id })} place={item} />
+          <V2PlaceRow
+            index={index + 1}
+            onPress={() => {
+              analytics.placeOpened(item.status);
+              navigation.navigate({ name: 'PlaceDetail', placeId: item.id });
+            }}
+            place={item}
+          />
         )}
       />
     </View>
