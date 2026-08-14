@@ -10,6 +10,7 @@ import { V2SectionLabel, V2TopBar } from '../components/v2-layout';
 import { FavoriteMark } from '../components/v2-marks';
 import { AppTheme, useAppTheme } from '../design-system/theme';
 import type { AppNavigation } from '../navigation/types';
+import { analytics } from '../observability/analytics';
 import { addUserTag, deleteUserTag } from '../services/tags/user-tags';
 import { usePlaces } from '../store/PlacesContext';
 import type { PlaceStatus, PlaceTag } from '../types/place';
@@ -18,11 +19,10 @@ import { statusLabels } from '../utils/labels';
 type V2PlaceDetailScreenProps = { navigation: AppNavigation; placeId: string };
 const statusOptions: PlaceStatus[] = ['want_to_go', 'visited', 'skipped'];
 
-const openExternalUrl = async (url: string, destination: string) => {
+const openExternalUrl = async (url: string, destination: string, onOpened?: () => void) => {
   try {
-    const isSupported = await Linking.canOpenURL(url);
-    if (!isSupported) throw new Error('Unsupported URL');
     await Linking.openURL(url);
+    onOpened?.();
   } catch {
     Alert.alert(`${destination} unavailable`, 'This link could not be opened on this device.');
   }
@@ -52,7 +52,8 @@ export function V2PlaceDetailScreen({ navigation, placeId }: V2PlaceDetailScreen
     setPendingStatus(status);
     try {
       const didUpdate = await updatePlace(place.id, { status });
-      if (!didUpdate) Alert.alert('Status not updated', `The status could not be changed to ${statusLabels[status]}.`);
+      if (didUpdate) analytics.placeStatusChanged(place.status, status);
+      else Alert.alert('Status not updated', `The status could not be changed to ${statusLabels[status]}.`);
     } catch {
       Alert.alert('Status not updated', `The status could not be changed to ${statusLabels[status]}.`);
     } finally {
@@ -66,8 +67,10 @@ export function V2PlaceDetailScreen({ navigation, placeId }: V2PlaceDetailScreen
     placeStateUpdateInFlight.current = true;
     setIsUpdatingFavorite(true);
     try {
-      const didUpdate = await updatePlace(place.id, { isFavorite: !place.isFavorite });
-      if (!didUpdate) Alert.alert('Favorite not updated', 'The favorite setting could not be changed.');
+      const nextFavorite = !place.isFavorite;
+      const didUpdate = await updatePlace(place.id, { isFavorite: nextFavorite });
+      if (didUpdate) analytics.favoriteChanged(nextFavorite);
+      else Alert.alert('Favorite not updated', 'The favorite setting could not be changed.');
     } catch {
       Alert.alert('Favorite not updated', 'The favorite setting could not be changed.');
     } finally {
@@ -278,7 +281,7 @@ export function V2PlaceDetailScreen({ navigation, placeId }: V2PlaceDetailScreen
       <View style={styles.controlSection}>
         <V2SectionLabel>Actions</V2SectionLabel>
         <V2Button label="OPEN INSTAGRAM" onPress={() => void openExternalUrl(place.sourceInstagramUrl, 'Instagram')} variant="secondary" />
-        {mapUrl ? <V2Button label="OPEN MAP" onPress={() => void openExternalUrl(mapUrl, 'Map')} variant="secondary" /> : null}
+        {mapUrl ? <V2Button label="OPEN MAP" onPress={() => void openExternalUrl(mapUrl, 'Map', analytics.mapLinkOpened)} variant="secondary" /> : null}
       </View>
 
       <View style={styles.detailsSection}>

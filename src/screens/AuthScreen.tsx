@@ -12,6 +12,7 @@ import {
 import { AppButton } from '../components/AppButton';
 import { AppTextField } from '../components/app-text-field';
 import { AppTheme, useAppTheme } from '../design-system/theme';
+import { analytics } from '../observability/analytics';
 
 type AuthMode = 'signIn' | 'signUp';
 type AuthStep = 'email' | 'code';
@@ -83,12 +84,14 @@ export function AuthScreen() {
         if (signUp.status !== 'complete') throw new Error('Your account needs another verification step.');
         const { error: finalizeError } = await signUp.finalize();
         if (finalizeError) throw finalizeError;
+        analytics.markAuthenticationCompleted();
       } else {
         const { error } = await signIn.emailCode.verifyCode({ code: code.trim() });
         if (error) throw error;
         if (signIn.status !== 'complete') throw new Error('Your sign-in needs another verification step.');
         const { error: finalizeError } = await signIn.finalize();
         if (finalizeError) throw finalizeError;
+        analytics.markAuthenticationCompleted();
       }
     } catch (error) {
       setErrorMessage(getErrorMessage(error));

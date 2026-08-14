@@ -7,6 +7,7 @@ import { V2Console, V2TitleBlock, V2TopBar } from '../components/v2-layout';
 import { getDefaultGeoContext } from '../config/geoContext';
 import { AppTheme, useAppTheme } from '../design-system/theme';
 import type { AppNavigation } from '../navigation/types';
+import { analytics } from '../observability/analytics';
 import { extractInstagramUrl } from '../services/incomingShare/instagramUrl';
 import { instagramImportProvider } from '../services/instagramImport';
 import { placeExtractionService } from '../services/placeExtraction';
@@ -55,6 +56,7 @@ export function V2AddPlaceScreen({ navigation, initialInstagramUrl }: V2AddPlace
   const navigateToCandidates = async (extraction: PlaceExtractionResult, searchQuery: string, instagramUrl: string) => {
     const candidates = await placeSearchService.searchPlaces({ query: searchQuery, searchCandidates: prioritizeManualSearch(extraction, manualPlaceName), geoContext: extraction.geoContext });
     if (!isMountedRef.current) return;
+    analytics.candidatesDisplayed(candidates.length);
     navigation.navigate({ name: 'CandidateMatch', draft: { sourceInstagramUrl: instagramUrl, extraction }, candidates });
   };
 
@@ -79,13 +81,18 @@ export function V2AddPlaceScreen({ navigation, initialInstagramUrl }: V2AddPlace
     }
     setSourceInstagramUrl(instagramUrl);
     setIsFindingPlace(true);
+    analytics.importStarted();
+    let didImportSucceed = false;
     try {
       let extraction: PlaceExtractionResult | undefined;
       const userHint = manualPlaceName.trim() || undefined;
       try {
         const instagramImport = await instagramImportProvider.importUrl({ url: instagramUrl });
+        didImportSucceed = true;
+        analytics.importSucceeded();
         extraction = await placeExtractionService.extractPlace({ instagramImport, userHint });
       } catch (error) {
+        if (!didImportSucceed) analytics.importFailed(error);
         if (!isMountedRef.current) return;
         const message = error instanceof Error ? error.message : 'Instagram import failed.';
         setNeedsManualQuery(true);

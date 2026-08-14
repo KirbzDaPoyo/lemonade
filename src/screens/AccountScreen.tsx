@@ -6,6 +6,7 @@ import { V2Button } from '../components/v2-controls';
 import { V2SectionLabel, V2TitleBlock, V2TopBar } from '../components/v2-layout';
 import { AppTheme, ThemePreference, useAppTheme } from '../design-system/theme';
 import type { AppNavigation } from '../navigation/types';
+import { analytics } from '../observability/analytics';
 
 const appearanceOptions: Array<{ value: ThemePreference; label: string; description: string }> = [
   { value: 'system', label: 'System', description: 'Follow your device appearance.' },
@@ -27,6 +28,7 @@ export function AccountScreen({ navigation }: { navigation: AppNavigation }) {
     setIsSigningOut(true);
     setErrorMessage(undefined);
     try {
+      await analytics.signOut();
       await signOut();
     } catch (error) {
       setErrorMessage(error instanceof Error ? error.message : 'Could not sign out.');

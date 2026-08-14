@@ -6,6 +6,7 @@ import { Alert } from 'react-native';
 import { useImportFlow } from './import-flow-context';
 import { appRoutePaths } from './route-contract';
 import { getIncomingInstagramUrl } from './share-routing';
+import { analytics } from '../observability/analytics';
 
 
 export function AuthenticatedShareCoordinator() {
@@ -41,6 +42,7 @@ export function AuthenticatedShareCoordinator() {
       return;
     }
 
+    analytics.shareReceived();
     beginSharedAdd(instagramUrl);
     if (router.canDismiss()) {
       router.dismissAll();

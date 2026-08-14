@@ -17,6 +17,7 @@ import { useMemo } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
+import { AnalyticsIdentitySync } from '../src/observability/analytics-identity';
 import {
   AppTheme,
   AppThemeProvider,
@@ -122,6 +123,7 @@ function AppBoot() {
       publishableKey={clerkPublishableKey}
       tokenCache={tokenCache}
     >
+      <AnalyticsIdentitySync />
       <AppFrame>
         <RootNavigator />
       </AppFrame>
