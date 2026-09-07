@@ -134,6 +134,12 @@ export class SupabaseSavedPlacesRepository implements SavedPlacesRepository {
     return (data ?? []).map(mapRowToPlace);
   }
 
+  async getExportData() {
+    const [places, tags] = await Promise.all([this.listPlaces(), this.listTags()]);
+
+    return { places, tags };
+  }
+
   async listTags() {
     const { data, error } = await this.supabase
       .from('place_tags')

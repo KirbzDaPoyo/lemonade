@@ -1,6 +1,7 @@
 import { useAuth, useUser } from '@clerk/expo';
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { SafeAreaView } from 'react-native-safe-area-context';
 
 import { V2Button } from '../components/v2-controls';
 import { V2SectionLabel, V2TitleBlock, V2TopBar } from '../components/v2-layout';
@@ -8,6 +9,9 @@ import { AppTheme, ThemePreference, useAppTheme } from '../design-system/theme';
 import type { AppNavigation } from '../navigation/types';
 import { analytics } from '../observability/analytics';
 import { errorMonitoring } from '../observability/error-monitoring';
+import { deleteCurrentUserData } from '../services/account/delete-account-data';
+import { sharePlaceDataExport } from '../services/export/share-place-data-export';
+import { usePlaces } from '../store/PlacesContext';
 
 const appearanceOptions: Array<{ value: ThemePreference; label: string; description: string }> = [
   { value: 'system', label: 'System', description: 'Follow your device appearance.' },
@@ -21,12 +25,18 @@ const canVerifyErrorMonitoring =
 export function AccountScreen({ navigation }: { navigation: AppNavigation }) {
   const { appearance, setAppearance, theme } = useAppTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
-  const { signOut } = useAuth();
+  const { getToken, signOut } = useAuth();
   const { user } = useUser();
+  const { clearLocalData, getExportData } = usePlaces();
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | undefined>();
   const [showTechnicalId, setShowTechnicalId] = useState(false);
   const [verificationStatus, setVerificationStatus] = useState<'idle' | 'sending' | 'sent' | 'failed'>('idle');
+  const [exportStatus, setExportStatus] = useState<'idle' | 'exporting' | 'failed'>('idle');
+  const [showDeletion, setShowDeletion] = useState(false);
+  const [deletionConfirmation, setDeletionConfirmation] = useState('');
+  const [deletionPhase, setDeletionPhase] = useState<'idle' | 'deleting_data' | 'deleting_identity' | 'partial'>('idle');
+  const [deletionMessage, setDeletionMessage] = useState<string | undefined>();
   const selectedDescription = appearanceOptions.find((option) => option.value === appearance)?.description;
 
   const handleSignOut = async () => {
@@ -51,7 +61,81 @@ export function AccountScreen({ navigation }: { navigation: AppNavigation }) {
     setVerificationStatus(sent ? 'sent' : 'failed');
   };
 
+
+  const handleExport = async () => {
+    setExportStatus('exporting');
+    const exportData = await getExportData();
+
+    if (!exportData) {
+      setExportStatus('failed');
+      return;
+    }
+
+    try {
+      await sharePlaceDataExport(exportData);
+      setExportStatus('idle');
+    } catch (error) {
+      errorMonitoring.captureException(error, { operation: 'data_export', category: 'export' });
+      setExportStatus('failed');
+    }
+  };
+
+  const finishIdentityDeletion = async () => {
+    if (!user) {
+      setDeletionPhase('partial');
+      setDeletionMessage('Your Lemonade data was deleted, but the Clerk account is unavailable. Retry identity deletion while signed in.');
+      return;
+    }
+
+    setDeletionPhase('deleting_identity');
+    try {
+      await user.delete();
+    } catch (error) {
+      errorMonitoring.captureException(error, { operation: 'account_deletion', category: 'account' });
+      setDeletionPhase('partial');
+      setDeletionMessage('Your saved places and tags were deleted, but your Clerk account was not. Retry identity deletion below without recreating any data.');
+      return;
+    }
+
+    analytics.reset();
+    errorMonitoring.resetIdentity();
+    clearLocalData();
+    await signOut().catch(() => undefined);
+    setShowDeletion(false);
+    Alert.alert('Account deleted', 'Your Lemonade data and sign-in identity were deleted.');
+  };
+
+  const handleDeleteAccount = async () => {
+    setDeletionMessage(undefined);
+    setDeletionPhase('deleting_data');
+
+    try {
+      const freshAccessToken = await getToken({ skipCache: true });
+
+      if (!freshAccessToken) {
+        throw new Error('A fresh authenticated session could not be confirmed.');
+      }
+
+      await deleteCurrentUserData(freshAccessToken);
+    } catch (error) {
+      errorMonitoring.captureException(error, { operation: 'account_deletion', category: 'account' });
+      setDeletionPhase('idle');
+      setDeletionMessage('Nothing was deleted. We could not remove your Lemonade data, so your sign-in identity was kept. Check your connection and retry.');
+      return;
+    }
+
+    await finishIdentityDeletion();
+  };
+
+  const closeDeletion = () => {
+    if (deletionPhase === 'deleting_data' || deletionPhase === 'deleting_identity') return;
+    setShowDeletion(false);
+    setDeletionConfirmation('');
+    setDeletionMessage(undefined);
+    setDeletionPhase('idle');
+  };
   return (
+    <>
     <ScrollView contentContainerStyle={styles.content} contentInsetAdjustmentBehavior="automatic" style={styles.screen}>
       <V2TopBar onBack={navigation.goBack} />
       <V2TitleBlock decorated={false} subtitle="Identity, privacy, and appearance for your private place library." title="YOUR ACCOUNT" />
@@ -103,6 +187,19 @@ export function AccountScreen({ navigation }: { navigation: AppNavigation }) {
         <Text accessibilityLiveRegion="polite" style={styles.body}>{selectedDescription}</Text>
       </View>
 
+
+      <View style={styles.module}>
+        <V2SectionLabel>Data export</V2SectionLabel>
+        <Text style={styles.body}>Download a complete JSON copy of your saved places, tags, notes, statuses, favorites, dates, and source links.</Text>
+        <Text style={styles.body}>Your device's share sheet lets you choose the final destination. Lemonade replaces its temporary export file the next time you export.</Text>
+        <V2Button
+          disabled={exportStatus === 'exporting'}
+          label={exportStatus === 'exporting' ? 'PREPARING EXPORT' : 'EXPORT MY DATA'}
+          onPress={() => void handleExport()}
+          variant="secondary"
+        />
+        {exportStatus === 'failed' ? <Text accessibilityRole="alert" style={styles.error}>Your export could not be shared. Check your connection and try again.</Text> : null}
+      </View>
       {canVerifyErrorMonitoring ? (
         <View style={styles.module}>
           <V2SectionLabel>Preview diagnostics</V2SectionLabel>
@@ -124,7 +221,62 @@ export function AccountScreen({ navigation }: { navigation: AppNavigation }) {
         <V2Button disabled={isSigningOut} label={isSigningOut ? 'SIGNING OUT' : 'SIGN OUT'} onPress={() => void handleSignOut()} variant="secondary" />
         {errorMessage ? <Text accessibilityRole="alert" selectable style={styles.error}>{errorMessage}</Text> : null}
       </View>
+
+      <View style={[styles.module, styles.dangerModule]}>
+        <V2SectionLabel color="pink">Delete account</V2SectionLabel>
+        <Text style={styles.body}>Permanently delete your saved places, tags, notes, preferences, and Clerk sign-in identity. This cannot be undone.</Text>
+        <V2Button label="DELETE ACCOUNT" onPress={() => setShowDeletion(true)} variant="danger" />
+      </View>
     </ScrollView>
+
+    <Modal animationType="slide" onRequestClose={closeDeletion} visible={showDeletion}>
+      <SafeAreaView style={styles.modalScreen}>
+        <ScrollView contentContainerStyle={styles.modalContent}>
+          <V2TopBar onBack={closeDeletion} />
+          <V2TitleBlock
+            decorated={false}
+            subtitle="This permanently removes both your private Lemonade library and your sign-in identity."
+            title="DELETE ACCOUNT"
+          />
+          <View style={styles.deletionSummary}>
+            <V2SectionLabel color="pink">What will be deleted</V2SectionLabel>
+            <Text style={styles.body}>• All saved places, tags, notes, statuses, and favorites</Text>
+            <Text style={styles.body}>• Your Clerk account and ability to sign in with this identity</Text>
+          </View>
+
+          {deletionPhase === 'partial' ? (
+            <View style={styles.deletionSummary}>
+              <Text accessibilityRole="alert" style={styles.error}>{deletionMessage}</Text>
+              <V2Button label="RETRY IDENTITY DELETION" onPress={() => void finishIdentityDeletion()} variant="danger" />
+            </View>
+          ) : (
+            <View style={styles.deletionSummary}>
+              <Text style={styles.body}>Type DELETE to confirm. If Lemonade data cannot be removed first, your identity will be kept and nothing will be reported as complete.</Text>
+              <TextInput
+                accessibilityLabel="Type DELETE to confirm account deletion"
+                autoCapitalize="characters"
+                autoCorrect={false}
+                editable={deletionPhase === 'idle'}
+                onChangeText={setDeletionConfirmation}
+                placeholder="DELETE"
+                placeholderTextColor={theme.colors.textSubtle}
+                style={styles.confirmationInput}
+                value={deletionConfirmation}
+              />
+              {deletionMessage ? <Text accessibilityRole="alert" style={styles.error}>{deletionMessage}</Text> : null}
+              <V2Button
+                disabled={deletionConfirmation !== 'DELETE' || deletionPhase !== 'idle'}
+                label={deletionPhase === 'deleting_data' ? 'DELETING LEMONADE DATA' : deletionPhase === 'deleting_identity' ? 'DELETING IDENTITY' : 'DELETE PERMANENTLY'}
+                onPress={() => void handleDeleteAccount()}
+                variant="danger"
+              />
+              <V2Button disabled={deletionPhase !== 'idle'} label="CANCEL" onPress={closeDeletion} variant="secondary" />
+            </View>
+          )}
+        </ScrollView>
+      </SafeAreaView>
+    </Modal>
+    </>
   );
 }
 
@@ -148,5 +300,15 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
   appearanceOptionLabelSelected: { color: theme.colors.onPrimary },
   error: { backgroundColor: theme.colors.dangerSurface, color: theme.colors.danger, fontSize: theme.typography.body.small, lineHeight: 19, padding: theme.spacing.md },
   success: { color: theme.colors.primary, fontFamily: theme.typography.displayFamily, fontSize: 13, letterSpacing: 0.6 },
+  dangerModule: { borderBottomColor: theme.colors.danger, borderTopColor: theme.colors.danger },
+  modalScreen: { backgroundColor: theme.colors.background, flex: 1 },
+  modalContent: { gap: theme.spacing.xl, padding: theme.spacing.lg, paddingBottom: theme.spacing.huge },
+  deletionSummary: { gap: theme.spacing.md },
+  confirmationInput: {
+    backgroundColor: theme.colors.input, borderColor: theme.colors.danger, borderWidth: 1,
+    color: theme.colors.text, fontFamily: theme.typography.displayFamily, fontSize: 20,
+    letterSpacing: 1.5, minHeight: 56, paddingHorizontal: theme.spacing.md,
+    paddingVertical: theme.spacing.md
+  },
   pressed: { opacity: 0.68 }
 });

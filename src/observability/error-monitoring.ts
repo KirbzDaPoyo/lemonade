@@ -4,9 +4,11 @@ import { Platform } from 'react-native';
 import * as Sentry from '@sentry/react-native';
 
 export type ErrorOperation =
+  | 'account_deletion'
   | 'app_frame'
   | 'authenticated_navigation'
   | 'authentication_transition'
+  | 'data_export'
   | 'import_flow'
   | 'monitoring_verification'
   | 'place_search'
@@ -14,8 +16,10 @@ export type ErrorOperation =
   | 'saved_places_write';
 
 export type ErrorCategory =
+  | 'account'
   | 'boundary'
   | 'authentication'
+  | 'export'
   | 'import'
   | 'navigation'
   | 'search'

@@ -12,7 +12,8 @@ import {
 import {
   createSavedPlacesRepository,
   PlaceInput,
-  PlaceUpdate
+  PlaceUpdate,
+  SavedPlacesExportData
 } from '../repositories/savedPlaces';
 import { getUserTagKey } from '../services/tags/user-tags';
 import { errorMonitoring } from '../observability/error-monitoring';
@@ -30,6 +31,8 @@ type PlacesContextValue = {
   createTag: (name: string) => Promise<PlaceTag | undefined>;
   renameTag: (id: string, name: string) => Promise<boolean>;
   deleteTag: (id: string) => Promise<boolean>;
+  clearLocalData: () => void;
+  getExportData: () => Promise<SavedPlacesExportData | undefined>;
   retryStorage: () => void;
 };
 
@@ -136,6 +139,13 @@ export function PlacesProvider({
     }
   }, [repository]);
 
+  const clearLocalData = useCallback(() => {
+    setPlaces([]);
+    setAvailableTags([]);
+    setStorageError(undefined);
+    hasHydratedRef.current = false;
+  }, []);
+
   const value = useMemo<PlacesContextValue>(
     () => ({
       availableTags,
@@ -144,6 +154,31 @@ export function PlacesProvider({
       isStorageAvailable: Boolean(repository),
       storageError,
       retryStorage,
+      clearLocalData,
+      getExportData: async () => {
+        if (!repository) {
+          setStorageError(configurationError);
+          return undefined;
+        }
+
+        try {
+          const exportData = await repository.getExportData();
+          setStorageError(undefined);
+          return exportData;
+        } catch (error) {
+          errorMonitoring.captureException(error, {
+            operation: 'data_export',
+            category: 'storage'
+          });
+          setStorageError(
+            getStorageErrorMessage(
+              'Your data could not be prepared for export. Retry in a moment.',
+              error
+            )
+          );
+          return undefined;
+        }
+      },
       addPlace: async (place) => {
         if (!repository) {
           setStorageError(configurationError);
@@ -295,7 +330,16 @@ export function PlacesProvider({
         }
       }
     }),
-    [availableTags, configurationError, isLoading, places, repository, retryStorage, storageError]
+    [
+      availableTags,
+      clearLocalData,
+      configurationError,
+      isLoading,
+      places,
+      repository,
+      retryStorage,
+      storageError
+    ]
   );
 
   return <PlacesContext.Provider value={value}>{children}</PlacesContext.Provider>;

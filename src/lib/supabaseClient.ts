@@ -96,6 +96,25 @@ export const createSupabaseFetchWithJwtClockSkewRetry = (
 let client: SupabaseClient | undefined;
 let currentAccessTokenProvider: SupabaseAccessTokenProvider | undefined;
 
+export const createFreshTokenSupabaseClient = (accessToken: string) => {
+  if (!backendConfig.supabaseUrl || !backendConfig.supabasePublishableKey) {
+    return undefined;
+  }
+
+  return createClient(
+    backendConfig.supabaseUrl,
+    backendConfig.supabasePublishableKey,
+    {
+      accessToken: async () => accessToken,
+      auth: {
+        autoRefreshToken: false,
+        persistSession: false,
+        detectSessionInUrl: false
+      }
+    }
+  );
+};
+
 export const createSupabaseClient = (
   accessTokenProvider?: SupabaseAccessTokenProvider
 ) => {
