@@ -13,12 +13,13 @@ import { AppButton } from '../components/AppButton';
 import { AppTextField } from '../components/app-text-field';
 import { AppTheme, useAppTheme } from '../design-system/theme';
 import { analytics } from '../observability/analytics';
+import { errorMonitoring } from '../observability/error-monitoring';
 
 type AuthMode = 'signIn' | 'signUp';
 type AuthStep = 'email' | 'code';
 
 type ClerkErrorLike = {
-  errors?: Array<{ longMessage?: string; message?: string }>;
+  errors?: Array<{ code?: string; longMessage?: string; message?: string }>;
   message?: string;
 };
 
@@ -27,6 +28,19 @@ const getErrorMessage = (error: unknown) => {
   return clerkError.errors?.[0]?.longMessage ?? clerkError.errors?.[0]?.message ?? clerkError.message ?? 'Something went wrong. Please try again.';
 };
 
+const isExpectedAuthOutcome = (error: unknown) => {
+  const clerkError = error as ClerkErrorLike;
+  const code = clerkError.errors?.[0]?.code ?? '';
+  return /(?:incorrect|invalid|expired|not_found|already|rate_limit|too_many)/i.test(code);
+};
+
+const reportUnexpectedAuthFailure = (error: unknown) => {
+  if (isExpectedAuthOutcome(error)) return;
+  errorMonitoring.captureException(error, {
+    operation: 'authentication_transition',
+    category: 'authentication'
+  });
+};
 export function AuthScreen() {
   const { theme } = useAppTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
@@ -63,6 +77,7 @@ export function AuthScreen() {
       setEmailAddress(cleanEmail);
       setStep('code');
     } catch (error) {
+      reportUnexpectedAuthFailure(error);
       setErrorMessage(getErrorMessage(error));
     } finally {
       setIsSubmitting(false);
@@ -94,6 +109,7 @@ export function AuthScreen() {
         analytics.markAuthenticationCompleted();
       }
     } catch (error) {
+      reportUnexpectedAuthFailure(error);
       setErrorMessage(getErrorMessage(error));
     } finally {
       setIsSubmitting(false);

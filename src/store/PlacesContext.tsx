@@ -15,6 +15,7 @@ import {
   PlaceUpdate
 } from '../repositories/savedPlaces';
 import { getUserTagKey } from '../services/tags/user-tags';
+import { errorMonitoring } from '../observability/error-monitoring';
 import type { PlaceCard, PlaceTag } from '../types/place';
 
 type PlacesContextValue = {
@@ -103,10 +104,16 @@ export function PlacesProvider({
         setStorageError(undefined);
       } else {
         const rejectedResult = placesResult.status === 'rejected' ? placesResult : tagsResult;
+        const rejectionReason =
+          rejectedResult.status === 'rejected' ? rejectedResult.reason : undefined;
+        errorMonitoring.captureException(rejectionReason, {
+          operation: 'saved_places_hydration',
+          category: 'storage'
+        });
         setStorageError(
           getStorageErrorMessage(
             'Some library data could not be loaded. Retry to reconnect.',
-            rejectedResult.status === 'rejected' ? rejectedResult.reason : undefined
+            rejectionReason
           )
         );
       }
@@ -158,6 +165,7 @@ export function PlacesProvider({
           setStorageError(undefined);
           return persistedPlace;
         } catch (error) {
+          errorMonitoring.captureException(error, { operation: 'saved_places_write', category: 'storage' });
           setStorageError(getStorageErrorMessage('Saved place could not be created. Retry in a moment.', error));
           return undefined;
         }
@@ -177,6 +185,7 @@ export function PlacesProvider({
           setStorageError(undefined);
           return true;
         } catch (error) {
+          errorMonitoring.captureException(error, { operation: 'saved_places_write', category: 'storage' });
           setStorageError(getStorageErrorMessage('Saved place could not be updated. Retry in a moment.', error));
           return false;
         }
@@ -193,6 +202,7 @@ export function PlacesProvider({
           setStorageError(undefined);
           return true;
         } catch (error) {
+          errorMonitoring.captureException(error, { operation: 'saved_places_write', category: 'storage' });
           setStorageError(getStorageErrorMessage('Saved place could not be deleted. Retry in a moment.', error));
           return false;
         }
@@ -209,6 +219,7 @@ export function PlacesProvider({
           setStorageError(undefined);
           return createdTag;
         } catch (error) {
+          errorMonitoring.captureException(error, { operation: 'saved_places_write', category: 'storage' });
           setStorageError(getStorageErrorMessage('Tag could not be created. Retry in a moment.', error));
           return undefined;
         }
@@ -246,6 +257,7 @@ export function PlacesProvider({
           setStorageError(undefined);
           return true;
         } catch (error) {
+          errorMonitoring.captureException(error, { operation: 'saved_places_write', category: 'storage' });
           setStorageError(getStorageErrorMessage('Tag could not be renamed. Retry in a moment.', error));
           return false;
         }
@@ -277,6 +289,7 @@ export function PlacesProvider({
           setStorageError(undefined);
           return true;
         } catch (error) {
+          errorMonitoring.captureException(error, { operation: 'saved_places_write', category: 'storage' });
           setStorageError(getStorageErrorMessage('Tag could not be deleted. Retry in a moment.', error));
           return false;
         }

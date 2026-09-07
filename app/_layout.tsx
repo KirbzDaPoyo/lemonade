@@ -17,7 +17,10 @@ import { useMemo } from 'react';
 import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { SafeAreaProvider, SafeAreaView } from 'react-native-safe-area-context';
 
+import { AppRecoveryBoundary } from '../src/components/app-recovery-boundary';
 import { AnalyticsIdentitySync } from '../src/observability/analytics-identity';
+import { ErrorMonitoringIdentitySync } from '../src/observability/error-monitoring-identity';
+import { wrapWithErrorMonitoring } from '../src/observability/error-monitoring';
 import {
   AppTheme,
   AppThemeProvider,
@@ -124,6 +127,7 @@ function AppBoot() {
       tokenCache={tokenCache}
     >
       <AnalyticsIdentitySync />
+      <ErrorMonitoringIdentitySync />
       <AppFrame>
         <RootNavigator />
       </AppFrame>
@@ -131,17 +135,25 @@ function AppBoot() {
   );
 }
 
-export default function RootLayout() {
+function RootLayout() {
   return (
     <ShareIntentProvider options={{ disabled: isExpoGo }}>
       <SafeAreaProvider>
         <AppThemeProvider>
-          <AppBoot />
+          <AppRecoveryBoundary
+            category="boundary"
+            operation="app_frame"
+            title="Project Lemonade paused"
+          >
+            <AppBoot />
+          </AppRecoveryBoundary>
         </AppThemeProvider>
       </SafeAreaProvider>
     </ShareIntentProvider>
   );
 }
+
+export default wrapWithErrorMonitoring(RootLayout);
 
 const createStyles = (theme: AppTheme) =>
   StyleSheet.create({
