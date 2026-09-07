@@ -9,7 +9,7 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "postinstall": "patch-package",
-    "test": "tsx --test --test-concurrency=1 tests/regression.test.ts tests/favorite-lifecycle.test.ts tests/tag-filtering.test.ts tests/user-tags.test.ts tests/incoming-share.test.ts tests/navigation.test.ts tests/user-accounts.test.ts tests/analytics-contract.test.ts tests/error-monitoring.test.ts",
+    "test": "tsx --test --test-concurrency=1 tests/regression.test.ts tests/favorite-lifecycle.test.ts tests/tag-filtering.test.ts tests/user-tags.test.ts tests/incoming-share.test.ts tests/navigation.test.ts tests/user-accounts.test.ts tests/analytics-contract.test.ts tests/error-monitoring.test.ts tests/data-export.test.ts tests/account-deletion.test.ts tests/public-deletion-page.test.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {
@@ -31,6 +31,7 @@
     "expo-router": "~6.0.24",
     "expo-secure-store": "~15.0.8",
     "expo-share-intent": "5.1.1",
+    "expo-sharing": "~14.0.8",
     "expo-status-bar": "~3.0.9",
     "expo-updates": "~29.0.20",
     "posthog-react-native": "^4.63.0",

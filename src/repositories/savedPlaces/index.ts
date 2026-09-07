@@ -5,7 +5,10 @@ import {
 import { SupabaseSavedPlacesRepository } from './SupabaseSavedPlacesRepository';
 import { SavedPlacesRepository } from './types';
 
-export type { NewPlace, PlaceInput, PlaceUpdate, SavedPlacesRepository } from './types';
+export type {
+  NewPlace, PlaceInput, PlaceUpdate,
+  SavedPlacesExportData, SavedPlacesRepository
+} from './types';
 
 export type SavedPlacesRepositoryConfiguration = {
   repository?: SavedPlacesRepository;

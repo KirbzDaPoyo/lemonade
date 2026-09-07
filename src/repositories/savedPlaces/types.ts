@@ -13,9 +13,12 @@ export type PlaceUpdate = Partial<
     placeId: string | null;
   }
 >;
+export type SavedPlacesExportData = { places: PlaceCard[]; tags: PlaceTag[] };
+
 
 export interface SavedPlacesRepository {
   listPlaces(): Promise<PlaceCard[]>;
+  getExportData(): Promise<SavedPlacesExportData>;
   listTags(): Promise<PlaceTag[]>;
   createTag(name: string): Promise<PlaceTag>;
   renameTag(id: string, name: string): Promise<void>;
