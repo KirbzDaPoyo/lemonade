@@ -7,12 +7,16 @@ import { V2SectionLabel, V2TitleBlock, V2TopBar } from '../components/v2-layout'
 import { AppTheme, ThemePreference, useAppTheme } from '../design-system/theme';
 import type { AppNavigation } from '../navigation/types';
 import { analytics } from '../observability/analytics';
+import { errorMonitoring } from '../observability/error-monitoring';
 
 const appearanceOptions: Array<{ value: ThemePreference; label: string; description: string }> = [
   { value: 'system', label: 'System', description: 'Follow your device appearance.' },
   { value: 'light', label: 'Light', description: 'Cool-white editorial field.' },
   { value: 'dark', label: 'Dark', description: 'Near-black night field.' }
 ];
+
+const canVerifyErrorMonitoring =
+  process.env.EXPO_PUBLIC_APP_ENV !== 'production' && Boolean(process.env.EXPO_PUBLIC_SENTRY_DSN);
 
 export function AccountScreen({ navigation }: { navigation: AppNavigation }) {
   const { appearance, setAppearance, theme } = useAppTheme();
@@ -22,6 +26,7 @@ export function AccountScreen({ navigation }: { navigation: AppNavigation }) {
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | undefined>();
   const [showTechnicalId, setShowTechnicalId] = useState(false);
+  const [verificationStatus, setVerificationStatus] = useState<'idle' | 'sending' | 'sent' | 'failed'>('idle');
   const selectedDescription = appearanceOptions.find((option) => option.value === appearance)?.description;
 
   const handleSignOut = async () => {
@@ -31,9 +36,19 @@ export function AccountScreen({ navigation }: { navigation: AppNavigation }) {
       await analytics.signOut();
       await signOut();
     } catch (error) {
+      errorMonitoring.captureException(error, {
+        operation: 'authentication_transition',
+        category: 'authentication'
+      });
       setErrorMessage(error instanceof Error ? error.message : 'Could not sign out.');
       setIsSigningOut(false);
     }
+  };
+
+  const handleMonitoringVerification = async () => {
+    setVerificationStatus('sending');
+    const sent = await errorMonitoring.sendVerificationEvent();
+    setVerificationStatus(sent ? 'sent' : 'failed');
   };
 
   return (
@@ -88,6 +103,21 @@ export function AccountScreen({ navigation }: { navigation: AppNavigation }) {
         <Text accessibilityLiveRegion="polite" style={styles.body}>{selectedDescription}</Text>
       </View>
 
+      {canVerifyErrorMonitoring ? (
+        <View style={styles.module}>
+          <V2SectionLabel>Preview diagnostics</V2SectionLabel>
+          <Text style={styles.body}>Send one privacy-scrubbed test event to confirm error monitoring is connected.</Text>
+          <V2Button
+            disabled={verificationStatus === 'sending'}
+            label={verificationStatus === 'sending' ? 'SENDING TEST EVENT' : 'VERIFY ERROR MONITORING'}
+            onPress={() => void handleMonitoringVerification()}
+            variant="secondary"
+          />
+          {verificationStatus === 'sent' ? <Text accessibilityLiveRegion="polite" style={styles.success}>TEST EVENT SENT</Text> : null}
+          {verificationStatus === 'failed' ? <Text accessibilityRole="alert" style={styles.error}>The test event could not be sent. Check your connection and try again.</Text> : null}
+        </View>
+      ) : null}
+
       <View style={styles.module}>
         <V2SectionLabel color="pink">Session</V2SectionLabel>
         <Text style={styles.body}>Sign out only when you are finished with this private library on this device.</Text>
@@ -117,5 +147,6 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
   appearanceOptionLabel: { color: theme.colors.text, fontFamily: theme.typography.displayFamily, fontSize: 13, letterSpacing: 0.5, textTransform: 'uppercase' },
   appearanceOptionLabelSelected: { color: theme.colors.onPrimary },
   error: { backgroundColor: theme.colors.dangerSurface, color: theme.colors.danger, fontSize: theme.typography.body.small, lineHeight: 19, padding: theme.spacing.md },
+  success: { color: theme.colors.primary, fontFamily: theme.typography.displayFamily, fontSize: 13, letterSpacing: 0.6 },
   pressed: { opacity: 0.68 }
 });

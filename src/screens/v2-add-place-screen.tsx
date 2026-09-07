@@ -8,6 +8,7 @@ import { getDefaultGeoContext } from '../config/geoContext';
 import { AppTheme, useAppTheme } from '../design-system/theme';
 import type { AppNavigation } from '../navigation/types';
 import { analytics } from '../observability/analytics';
+import { errorMonitoring } from '../observability/error-monitoring';
 import { extractInstagramUrl } from '../services/incomingShare/instagramUrl';
 import { instagramImportProvider } from '../services/instagramImport';
 import { placeExtractionService } from '../services/placeExtraction';
@@ -114,6 +115,10 @@ export function V2AddPlaceScreen({ navigation, initialInstagramUrl }: V2AddPlace
       await navigateToCandidates(extraction, searchQuery, instagramUrl);
     } catch (error) {
       if (!isMountedRef.current) return;
+      errorMonitoring.captureException(error, {
+        operation: 'place_search',
+        category: 'search'
+      });
       const message = error instanceof Error ? error.message : "I couldn't identify the place from this reel.";
       if (manualPlaceName.trim()) Alert.alert('Place search failed', message);
       else { setNeedsManualQuery(true); Alert.alert('Add a search hint', `${message} What should we search?`); }

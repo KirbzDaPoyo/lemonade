@@ -2,11 +2,17 @@
   "expo": {
     "name": "Project Lemonade",
     "slug": "project-lemonade",
-    "version": "0.1.0",
+    "version": "0.2.0",
     "orientation": "portrait",
     "userInterfaceStyle": "automatic",
     "newArchEnabled": true,
     "scheme": "project-lemonade",
+    "runtimeVersion": {
+      "policy": "appVersion"
+    },
+    "updates": {
+      "url": "https://u.expo.dev/d6fa64ff-1623-4776-b302-9ccde3aae84d"
+    },
     "plugins": [
       [
         "expo-share-intent",
@@ -26,7 +32,15 @@
       "@clerk/expo",
       "expo-font",
       "expo-router",
-      "expo-localization"
+      "expo-localization",
+      [
+        "@sentry/react-native",
+        {
+          "organization": "land-of-poyo",
+          "project": "project-lemonade",
+          "url": "https://sentry.io/"
+        }
+      ]
     ],
     "assetBundlePatterns": [
       "**/*"
