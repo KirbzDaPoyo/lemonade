@@ -13,5 +13,6 @@ yarn-error.log*
 !.env.example
 .codex/
 .agents/
+.design/
 .impeccable/
 supabase/.temp/
