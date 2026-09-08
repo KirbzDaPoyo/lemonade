@@ -12,6 +12,7 @@ Candidate branch: `feature/release-0.2-ci-docs`
 | TypeScript | Passed: `tsc --noEmit` |
 | Expo Doctor | Passed: 18/18 checks |
 | Android JavaScript production bundle | Passed: Expo export produced an Android Hermes bundle |
+| GitHub Actions CI | Passed: branch push run #1 completed successfully |
 | Git diff and secret/artifact audit | Passed: no whitespace errors, secret matches, or tracked generated/internal-tool artifacts |
 | Production dependency registry audit | Recorded debt: 36 moderate and 12 high transitive findings; no non-breaking complete fix is currently offered |
 | Supabase security advisor after deletion migration | Passed: zero findings |
@@ -53,4 +54,4 @@ These items are recorded rather than represented as passed:
 
 ## Release conclusion
 
-Release 0.2 is an Android-validated engineering candidate once the final automated checks and GitHub CI pass. The remaining debt above is required input for store-release planning; it does not authorize a production deployment.
+Release 0.2 is an Android-validated engineering candidate. The remaining debt above is required input for store-release planning; it does not authorize a production deployment.
