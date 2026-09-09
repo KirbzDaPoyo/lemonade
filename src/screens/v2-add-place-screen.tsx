@@ -12,8 +12,10 @@ import { errorMonitoring } from '../observability/error-monitoring';
 import { extractInstagramUrl } from '../services/incomingShare/instagramUrl';
 import { instagramImportProvider } from '../services/instagramImport';
 import { placeExtractionService } from '../services/placeExtraction';
+import { createPlaceSourceDraft } from '../services/place-sources/source-metadata';
 import { placeSearchService } from '../services/placeSearch';
 import type { PlaceExtractionResult, PlaceSearchCandidate } from '../types/extraction';
+import type { PlaceSourceDraft } from '../types/place-source';
 
 type V2AddPlaceScreenProps = { navigation: AppNavigation; initialInstagramUrl?: string };
 
@@ -54,11 +56,15 @@ export function V2AddPlaceScreen({ navigation, initialInstagramUrl }: V2AddPlace
         ? 'Review the URL, then find matching places.'
         : 'Use a public Instagram post or reel URL.';
 
-  const navigateToCandidates = async (extraction: PlaceExtractionResult, searchQuery: string, instagramUrl: string) => {
+  const navigateToCandidates = async (
+    extraction: PlaceExtractionResult,
+    searchQuery: string,
+    source: PlaceSourceDraft
+  ) => {
     const candidates = await placeSearchService.searchPlaces({ query: searchQuery, searchCandidates: prioritizeManualSearch(extraction, manualPlaceName), geoContext: extraction.geoContext });
     if (!isMountedRef.current) return;
     analytics.candidatesDisplayed(candidates.length);
-    navigation.navigate({ name: 'CandidateMatch', draft: { sourceInstagramUrl: instagramUrl, extraction }, candidates });
+    navigation.navigate({ name: 'CandidateMatch', draft: { sourceInstagramUrl: source.sourceUrl, source, extraction }, candidates });
   };
 
   const buildManualExtraction = (): PlaceExtractionResult => ({
@@ -86,12 +92,22 @@ export function V2AddPlaceScreen({ navigation, initialInstagramUrl }: V2AddPlace
     let didImportSucceed = false;
     try {
       let extraction: PlaceExtractionResult | undefined;
+      let source = createPlaceSourceDraft({ fallbackUrl: instagramUrl });
       const userHint = manualPlaceName.trim() || undefined;
       try {
         const instagramImport = await instagramImportProvider.importUrl({ url: instagramUrl });
         didImportSucceed = true;
         analytics.importSucceeded();
+        source = createPlaceSourceDraft({
+          fallbackUrl: instagramUrl,
+          instagramImport
+        });
         extraction = await placeExtractionService.extractPlace({ instagramImport, userHint });
+        source = createPlaceSourceDraft({
+          fallbackUrl: instagramUrl,
+          instagramImport,
+          extraction
+        });
       } catch (error) {
         if (!didImportSucceed) analytics.importFailed(error);
         if (!isMountedRef.current) return;
@@ -99,7 +115,7 @@ export function V2AddPlaceScreen({ navigation, initialInstagramUrl }: V2AddPlace
         setNeedsManualQuery(true);
         if (manualPlaceName.trim()) {
           Alert.alert('Instagram import failed', `${message} Searching with your place name instead.`);
-          await navigateToCandidates(buildManualExtraction(), manualPlaceName.trim(), instagramUrl);
+          await navigateToCandidates(buildManualExtraction(), manualPlaceName.trim(), source);
         } else {
           Alert.alert('Instagram import failed', `${message} Enter the place name to search manually.`);
         }
@@ -112,7 +128,7 @@ export function V2AddPlaceScreen({ navigation, initialInstagramUrl }: V2AddPlace
         Alert.alert("I couldn't identify the place from this reel.", 'What should we search? Add a place name, then try again.');
         return;
       }
-      await navigateToCandidates(extraction, searchQuery, instagramUrl);
+      await navigateToCandidates(extraction, searchQuery, source);
     } catch (error) {
       if (!isMountedRef.current) return;
       errorMonitoring.captureException(error, {

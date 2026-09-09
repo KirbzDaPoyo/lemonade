@@ -148,12 +148,24 @@ export const analytics = {
   placeSaved(status: AnalyticsEventProperties['place_saved']['status']) {
     capture('place_saved', { status });
   },
+  placeSaveCompleted(outcome: AnalyticsEventProperties['place_save_completed']['outcome']) {
+    capture('place_save_completed', { outcome, source_platform: 'instagram' });
+  },
   placeOpened(status: AnalyticsEventProperties['place_opened']['status']) {
     capture('place_opened', { status });
   },
   mapLinkOpened() {
     capture('map_link_opened', { provider: 'google_maps' });
   },
+  instagramSourceOpened(
+    mediaType: AnalyticsEventProperties['instagram_source_opened']['media_type']
+  ) {
+    capture('instagram_source_opened', {
+      source_platform: 'instagram',
+      media_type: mediaType
+    });
+  },
+
   placeStatusChanged(
     previousStatus: AnalyticsEventProperties['place_status_changed']['previous_status'],
     status: AnalyticsEventProperties['place_status_changed']['status']

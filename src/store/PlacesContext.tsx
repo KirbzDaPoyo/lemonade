@@ -12,6 +12,7 @@ import {
 import {
   createSavedPlacesRepository,
   PlaceInput,
+  PlaceSaveResult,
   PlaceUpdate,
   SavedPlacesExportData
 } from '../repositories/savedPlaces';
@@ -25,6 +26,7 @@ type PlacesContextValue = {
   isLoading: boolean;
   isStorageAvailable: boolean;
   storageError?: string;
+  savePlace: (place: PlaceInput) => Promise<PlaceSaveResult | undefined>;
   addPlace: (place: PlaceInput) => Promise<PlaceCard | undefined>;
   updatePlace: (id: string, updates: PlaceUpdate) => Promise<boolean>;
   deletePlace: (id: string) => Promise<boolean>;
@@ -146,6 +148,48 @@ export function PlacesProvider({
     hasHydratedRef.current = false;
   }, []);
 
+  const persistPlace = useCallback(
+    async (place: PlaceInput) => {
+      if (!repository) {
+        setStorageError(configurationError);
+        return undefined;
+      }
+
+      const savedPlace = {
+        ...place,
+        id: makeId()
+      };
+
+      try {
+        const result = await repository.savePlace(savedPlace);
+        const persistedPlace = result.place;
+
+        setPlaces((currentPlaces) => [
+          persistedPlace,
+          ...currentPlaces.filter(
+            (currentPlace) => currentPlace.id !== persistedPlace.id
+          )
+        ]);
+        setStorageError(undefined);
+        return result;
+      } catch (error) {
+        errorMonitoring.captureException(error, {
+          operation: 'saved_places_write',
+          category: 'storage'
+        });
+        setStorageError(
+          getStorageErrorMessage(
+            'Saved place could not be created. Retry in a moment.',
+            error
+          )
+        );
+        return undefined;
+      }
+    },
+    [configurationError, repository]
+  );
+
+
   const value = useMemo<PlacesContextValue>(
     () => ({
       availableTags,
@@ -179,32 +223,8 @@ export function PlacesProvider({
           return undefined;
         }
       },
-      addPlace: async (place) => {
-        if (!repository) {
-          setStorageError(configurationError);
-          return undefined;
-        }
-
-        const savedPlace = {
-          ...place,
-          id: makeId()
-        };
-
-        try {
-          const persistedPlace = await repository.createPlace(savedPlace);
-
-          setPlaces((currentPlaces) => [
-            persistedPlace,
-            ...currentPlaces.filter((currentPlace) => currentPlace.id !== persistedPlace.id)
-          ]);
-          setStorageError(undefined);
-          return persistedPlace;
-        } catch (error) {
-          errorMonitoring.captureException(error, { operation: 'saved_places_write', category: 'storage' });
-          setStorageError(getStorageErrorMessage('Saved place could not be created. Retry in a moment.', error));
-          return undefined;
-        }
-      },
+      savePlace: persistPlace,
+      addPlace: async (place) => (await persistPlace(place))?.place,
       updatePlace: async (id, updates) => {
         if (!repository) {
           setStorageError(configurationError);
@@ -336,6 +356,7 @@ export function PlacesProvider({
       configurationError,
       isLoading,
       places,
+      persistPlace,
       repository,
       retryStorage,
       storageError

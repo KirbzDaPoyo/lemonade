@@ -6,8 +6,13 @@ import { SupabaseSavedPlacesRepository } from './SupabaseSavedPlacesRepository';
 import { SavedPlacesRepository } from './types';
 
 export type {
-  NewPlace, PlaceInput, PlaceUpdate,
-  SavedPlacesExportData, SavedPlacesRepository
+  NewPlace,
+  PlaceInput,
+  PlaceSaveOutcome,
+  PlaceSaveResult,
+  PlaceUpdate,
+  SavedPlacesExportData,
+  SavedPlacesRepository
 } from './types';
 
 export type SavedPlacesRepositoryConfiguration = {

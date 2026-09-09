@@ -17,6 +17,21 @@ const place: PlaceCard = {
   tags: ['coffee', 'café'],
   notes: 'Try the crème brûlée.',
   sourceInstagramUrl: 'https://www.instagram.com/reel/example/',
+  sources: [{
+    id: 'source-1',
+    savedPlaceId: 'place-1',
+    platform: 'instagram',
+    sourceUrl: 'https://www.instagram.com/reel/example/',
+    shortcode: 'example',
+    mediaType: 'reel',
+    creatorUsername: 'creator',
+    captionExcerpt: 'Try the custard latte.',
+    recommendedItems: ['custard latte'],
+    vibeTags: ['bright'],
+    thumbnailUrl: 'https://images.example/source.jpg',
+    publishedAt: '2026-08-31T01:02:03.000Z',
+    createdAt: '2026-09-01T01:02:03.000Z'
+  }],
   mapUrl: 'https://maps.google.com/?q=example',
   placeId: 'provider-place-1',
   status: 'want_to_go',
@@ -40,7 +55,7 @@ test('data export is versioned and contains every portable place field', () => {
   );
 
   assert.equal(dataExport.format, 'project-lemonade-data-export');
-  assert.equal(dataExport.schemaVersion, 1);
+  assert.equal(dataExport.schemaVersion, 2);
   assert.equal(dataExport.exportedAt, '2026-09-07T09:00:00.000Z');
   assert.deepEqual(dataExport.data.savedPlaces[0], {
     id: 'place-1',
@@ -57,7 +72,21 @@ test('data export is versioned and contains every portable place field', () => {
     updatedAt: '2026-09-02T01:02:03.000Z',
     sourceInstagramUrl: 'https://www.instagram.com/reel/example/',
     mapUrl: 'https://maps.google.com/?q=example',
-    providerPlaceId: 'provider-place-1'
+    providerPlaceId: 'provider-place-1',
+    sources: [{
+      id: 'source-1',
+      platform: 'instagram',
+      sourceUrl: 'https://www.instagram.com/reel/example/',
+      shortcode: 'example',
+      mediaType: 'reel',
+      creatorUsername: 'creator',
+      captionExcerpt: 'Try the custard latte.',
+      recommendedItems: ['custard latte'],
+      vibeTags: ['bright'],
+      thumbnailUrl: 'https://images.example/source.jpg',
+      publishedAt: '2026-08-31T01:02:03.000Z',
+      createdAt: '2026-09-01T01:02:03.000Z'
+    }]
   });
   assert.deepEqual(dataExport.data.tags, [tag]);
   assert.equal('userId' in dataExport, false);

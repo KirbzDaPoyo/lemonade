@@ -16,12 +16,18 @@ import type { DraftPlaceEntry, PlaceCandidate } from '../types/place';
 import { categoryLabels } from '../utils/labels';
 
 type V2CandidateMatchScreenProps = { navigation: AppNavigation; draft: DraftPlaceEntry; candidates: PlaceCandidate[] };
-type SavePlaceInput = Omit<PlaceInput, 'sourceInstagramUrl' | 'status' | 'isFavorite'>;
+type SavePlaceInput = Omit<PlaceInput, 'source' | 'sourceInstagramUrl' | 'status' | 'isFavorite'>;
+
+const saveMessages = {
+  created_place: ['Place saved', 'This place and its first Instagram source are now in your private index.'],
+  attached_source: ['Source added', 'This post or reel was added to the place you already saved.'],
+  existing_source: ['Already saved', 'This post or reel is already attached to this place.']
+} as const;
 
 export function V2CandidateMatchScreen({ navigation, draft, candidates }: V2CandidateMatchScreenProps) {
   const { theme } = useAppTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
-  const { addPlace, availableTags } = usePlaces();
+  const { availableTags, savePlace: persistPlace } = usePlaces();
   const [selectedCandidateId, setSelectedCandidateId] = useState<string | null>(null);
   const [savingKey, setSavingKey] = useState<string>();
   const [saveDockHeight, setSaveDockHeight] = useState(0);
@@ -31,15 +37,18 @@ export function V2CandidateMatchScreen({ navigation, draft, candidates }: V2Cand
   const availableTagNames = availableTags.map((tag) => tag.name);
   const sharedTagClues = [extraction?.placeName, extraction?.cuisineOrSpecialty, ...(extraction?.vibeTags ?? []), ...(extraction?.recommendedItems ?? [])];
 
-  const saveOnce = async (saveKey: string, save: () => ReturnType<typeof addPlace>, failureMessage: string) => {
+  const saveOnce = async (saveKey: string, save: () => ReturnType<typeof persistPlace>, failureMessage: string) => {
     if (saveInFlightRef.current) return;
     saveInFlightRef.current = true;
     setSavingKey(saveKey);
     try {
-      const savedPlace = await save();
-      if (savedPlace) {
-        analytics.placeSaved(savedPlace.status);
-        navigation.replace({ name: 'PlaceDetail', placeId: savedPlace.id });
+      const result = await save();
+      if (result) {
+        analytics.placeSaveCompleted(result.outcome);
+        if (result.outcome === 'created_place') analytics.placeSaved(result.place.status);
+        navigation.replace({ name: 'PlaceDetail', placeId: result.place.id });
+        const [title, message] = saveMessages[result.outcome];
+        Alert.alert(title, message);
       } else Alert.alert('Save failed', failureMessage);
     } finally {
       saveInFlightRef.current = false;
@@ -47,7 +56,8 @@ export function V2CandidateMatchScreen({ navigation, draft, candidates }: V2Cand
     }
   };
 
-  const savePlace = (saveKey: string, place: SavePlaceInput, failureMessage: string) => saveOnce(saveKey, () => addPlace({ ...place, sourceInstagramUrl: draft.sourceInstagramUrl, isFavorite: false, status: 'want_to_go' }), failureMessage);
+  const savePlace = (saveKey: string, place: SavePlaceInput, failureMessage: string) => saveOnce(saveKey, () => persistPlace({ ...place, sourceInstagramUrl: draft.sourceInstagramUrl, source: draft.source, isFavorite: false, status: 'want_to_go' }), failureMessage);
+
 
   const handleSaveCandidate = async (candidate: PlaceCandidate) => {
     const category = resolveCandidatePlaceCategory(candidate, extraction);

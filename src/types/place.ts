@@ -3,6 +3,7 @@ import type {
   PlaceCategory as SharedPlaceCategory
 } from '../../supabase/functions/_shared/placeSearchContract';
 import type { PlaceExtractionResult } from './extraction';
+import type { PlaceSource, PlaceSourceDraft } from './place-source';
 
 export type PlaceCategory = SharedPlaceCategory;
 export type PlaceStatus = 'want_to_go' | 'visited' | 'skipped';
@@ -25,6 +26,7 @@ export type PlaceCard = {
   tags: string[];
   notes?: string;
   sourceInstagramUrl: string;
+  sources: PlaceSource[];
   mapUrl?: string;
   placeId?: string;
   status: PlaceStatus;
@@ -35,5 +37,8 @@ export type PlaceCard = {
 
 export type DraftPlaceEntry = {
   sourceInstagramUrl: string;
+  source?: PlaceSourceDraft;
   extraction?: PlaceExtractionResult;
 };
+
+export type { PlaceSource, PlaceSourceDraft, PlaceSourceMediaType } from './place-source';
