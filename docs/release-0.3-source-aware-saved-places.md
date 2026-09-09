@@ -79,10 +79,13 @@ Completed locally:
 - Backfill produced 33 source rows for 33 existing places.
 - Live checks passed all three save outcomes, cross-user invisibility and association rejection, deletion cascade, and simultaneous duplicate-save cleanup with zero orphan rows.
 - Supabase security advisor returned zero findings; the foreign-key performance finding was resolved with the follow-up ownership index.
-- No provider call, Edge Function deployment, EAS build, OTA publication, or paid-resource action was performed.
+- EAS Android development build `8981118a-4e9b-436d-9db0-b85e8602aac5` completed for app version 0.3.0, build 4, on the development channel.
+- Physical Android acceptance passed for a backfilled source with thumbnail fallback, a new place with a live thumbnail, exact-source duplicate messaging, attaching a second source without duplicating the place, opening both source URLs, restart persistence, schema-v2 export, and place deletion.
+- The post-deletion live database check found 33 places, 34 valid sources, zero orphaned sources, zero ownership mismatches, and an active cascading ownership foreign key. Supabase security advisor still returned zero findings.
+- No Edge Function deployment, OTA publication, store submission, or production rollout was performed.
 
 Still required before release:
 
 - Verify a 0.2 binary against the migrated schema.
-- Run the full Android flow for zero, one, and multiple sources, repeat-save messaging, new-source attachment, thumbnail failure, export, place deletion, and account deletion.
+- Exercise the zero-source detail state on a physical Android device and repeat authenticated account deletion with a disposable account. The zero-source and account-deletion paths retain automated coverage.
 - Physical iOS, accessibility, signing, store submission, and production rollout remain separate release gates.
