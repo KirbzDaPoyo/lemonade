@@ -19,6 +19,7 @@ const placeCard = (overrides: Partial<PlaceCard> = {}): PlaceCard => ({
   cuisineOrSpecialty: undefined,
   tags: [],
   sourceInstagramUrl: 'https://www.instagram.com/p/example/',
+  sources: [],
   status: 'visited',
   isFavorite: false,
   createdAt: '2026-08-01T00:00:00.000Z',

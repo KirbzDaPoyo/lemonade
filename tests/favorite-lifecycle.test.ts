@@ -42,6 +42,7 @@ const placeCard = (overrides: Partial<PlaceCard> = {}): PlaceCard => ({
   cuisineOrSpecialty: 'Cantonese',
   tags: ['cantonese'],
   sourceInstagramUrl: 'https://www.instagram.com/p/example/',
+  sources: [],
   placeId: 'provider-id',
   mapUrl: 'https://maps.example/place',
   status: 'visited',

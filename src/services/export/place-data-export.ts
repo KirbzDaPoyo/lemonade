@@ -1,7 +1,7 @@
 import type { PlaceCard, PlaceTag } from '../../types/place';
 
 export const PLACE_DATA_EXPORT_FORMAT = 'project-lemonade-data-export' as const;
-export const PLACE_DATA_EXPORT_SCHEMA_VERSION = 1 as const;
+export const PLACE_DATA_EXPORT_SCHEMA_VERSION = 2 as const;
 
 export type PlaceDataExport = {
   format: typeof PLACE_DATA_EXPORT_FORMAT;
@@ -24,6 +24,20 @@ export type PlaceDataExport = {
       sourceInstagramUrl: string;
       mapUrl: string | null;
       providerPlaceId: string | null;
+      sources: Array<{
+        id: string;
+        platform: 'instagram';
+        sourceUrl: string;
+        shortcode: string | null;
+        mediaType: 'post' | 'reel' | 'unknown';
+        creatorUsername: string | null;
+        captionExcerpt: string | null;
+        recommendedItems: string[];
+        vibeTags: string[];
+        thumbnailUrl: string | null;
+        publishedAt: string | null;
+        createdAt: string;
+      }>;
     }>;
     tags: Array<{
       id: string;
@@ -59,7 +73,21 @@ export const createPlaceDataExport = (
         updatedAt: place.updatedAt,
         sourceInstagramUrl: place.sourceInstagramUrl,
         mapUrl: place.mapUrl ?? null,
-        providerPlaceId: place.placeId ?? null
+        providerPlaceId: place.placeId ?? null,
+        sources: place.sources.map((source) => ({
+          id: source.id,
+          platform: source.platform,
+          sourceUrl: source.sourceUrl,
+          shortcode: source.shortcode ?? null,
+          mediaType: source.mediaType,
+          creatorUsername: source.creatorUsername ?? null,
+          captionExcerpt: source.captionExcerpt ?? null,
+          recommendedItems: [...source.recommendedItems],
+          vibeTags: [...source.vibeTags],
+          thumbnailUrl: source.thumbnailUrl ?? null,
+          publishedAt: source.publishedAt ?? null,
+          createdAt: source.createdAt
+        }))
       }))
       .sort((left, right) =>
         left.createdAt === right.createdAt

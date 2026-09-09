@@ -1,11 +1,48 @@
 import type { SupabaseClient } from '@supabase/supabase-js';
 
-import { PlaceTagRow, SavedPlaceRow } from '../../lib/supabaseClient';
-import { PlaceCard, PlaceTag } from '../../types/place';
+import {
+  PlaceTagRow,
+  SavedPlaceRow,
+  SavedPlaceSourceRow
+} from '../../lib/supabaseClient';
+import type { PlaceCard, PlaceSource, PlaceTag } from '../../types/place';
+import type { PlaceSourceDraft } from '../../types/place-source';
 import { normalizeInstagramSourceUrl } from './placeIdentity';
-import { NewPlace, PlaceUpdate, SavedPlacesRepository } from './types';
+import {
+  NewPlace,
+  PlaceSaveOutcome,
+  PlaceUpdate,
+  SavedPlacesRepository
+} from './types';
 
-export const mapRowToPlace = (row: SavedPlaceRow): PlaceCard => ({
+const safeStringArray = (value: string[] | null | undefined) =>
+  Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === 'string' && Boolean(item.trim()))
+    : [];
+
+export const mapSourceRow = (row: SavedPlaceSourceRow): PlaceSource => ({
+  id: row.id,
+  savedPlaceId: row.saved_place_id,
+  platform: 'instagram',
+  sourceUrl: normalizeInstagramSourceUrl(row.source_url),
+  shortcode: row.shortcode ?? undefined,
+  mediaType:
+    row.media_type === 'post' || row.media_type === 'reel'
+      ? row.media_type
+      : 'unknown',
+  creatorUsername: row.creator_username ?? undefined,
+  captionExcerpt: row.caption_excerpt ?? undefined,
+  recommendedItems: safeStringArray(row.recommended_items),
+  vibeTags: safeStringArray(row.vibe_tags),
+  thumbnailUrl: row.thumbnail_url ?? undefined,
+  publishedAt: row.published_at ?? undefined,
+  createdAt: row.created_at
+});
+
+export const mapRowToPlace = (
+  row: SavedPlaceRow,
+  sources: PlaceSource[] = []
+): PlaceCard => ({
   id: row.id,
   placeName: row.name,
   address: row.address,
@@ -15,6 +52,7 @@ export const mapRowToPlace = (row: SavedPlaceRow): PlaceCard => ({
   tags: row.user_tags ?? row.tags ?? [],
   notes: row.notes ?? undefined,
   sourceInstagramUrl: row.source_url,
+  sources,
   placeId: row.place_id ?? undefined,
   mapUrl: row.map_url ?? undefined,
   status: row.status,
@@ -79,59 +117,93 @@ export const shouldReplaceIncompleteManualPlace = (
   existingPlace.address === 'Address to confirm' &&
   Boolean(replacement.placeId);
 
+const fallbackSource = (place: NewPlace): PlaceSourceDraft => ({
+  platform: 'instagram',
+  sourceUrl: normalizeInstagramSourceUrl(place.sourceInstagramUrl),
+  mediaType: /\/p\//i.test(place.sourceInstagramUrl)
+    ? 'post'
+    : /\/reels?\//i.test(place.sourceInstagramUrl)
+      ? 'reel'
+      : 'unknown',
+  recommendedItems: [],
+  vibeTags: []
+});
+
+const isSaveOutcome = (value: unknown): value is PlaceSaveOutcome =>
+  value === 'created_place' ||
+  value === 'attached_source' ||
+  value === 'existing_source';
+
 export class SupabaseSavedPlacesRepository implements SavedPlacesRepository {
   constructor(
     private readonly supabase: SupabaseClient,
     private readonly userId: string
   ) {}
 
-  private async findExistingPlace(place: NewPlace) {
-    if (place.placeId) {
-      const { data, error } = await this.supabase
-        .from('saved_places')
-        .select('*')
-        .eq('place_id', place.placeId)
-        .eq('user_id', this.userId)
-        .limit(1)
-        .maybeSingle();
+  async listSources(savedPlaceId?: string) {
+    let query = this.supabase
+      .from('saved_place_sources')
+      .select('*')
+      .eq('user_id', this.userId)
+      .order('created_at', { ascending: true })
+      .order('id', { ascending: true });
 
-      if (error) {
-        throw toSupabaseError('duplicate check', error.message);
-      }
-
-      if (data) {
-        return mapRowToPlace(data);
-      }
+    if (savedPlaceId) {
+      query = query.eq('saved_place_id', savedPlaceId);
     }
 
-    const normalizedSourceUrl = normalizeInstagramSourceUrl(place.sourceInstagramUrl);
-    const { data, error } = await this.supabase
-      .from('saved_places')
-      .select('*')
-      .eq('source_url', normalizedSourceUrl)
-      .eq('user_id', this.userId)
-      .limit(1)
-      .maybeSingle();
+    const { data, error } = await query;
 
     if (error) {
-      throw toSupabaseError('duplicate check', error.message);
+      throw toSupabaseError('source read', error.message);
     }
 
-    return data ? mapRowToPlace(data) : undefined;
+    return (data ?? []).map((row) => mapSourceRow(row as SavedPlaceSourceRow));
   }
 
   async listPlaces() {
-    const { data, error } = await this.supabase
-      .from('saved_places')
-      .select('*')
-      .eq('user_id', this.userId)
-      .order('created_at', { ascending: false });
+    const [placesResult, sources] = await Promise.all([
+      this.supabase
+        .from('saved_places')
+        .select('*')
+        .eq('user_id', this.userId)
+        .order('created_at', { ascending: false }),
+      this.listSources()
+    ]);
+    const { data, error } = placesResult;
 
     if (error) {
       throw toSupabaseError('read', error.message);
     }
 
-    return (data ?? []).map(mapRowToPlace);
+    const sourcesByPlace = new Map<string, PlaceSource[]>();
+    sources.forEach((source) => {
+      const existing = sourcesByPlace.get(source.savedPlaceId) ?? [];
+      existing.push(source);
+      sourcesByPlace.set(source.savedPlaceId, existing);
+    });
+
+    return (data ?? []).map((row) =>
+      mapRowToPlace(row as SavedPlaceRow, sourcesByPlace.get(row.id) ?? [])
+    );
+  }
+
+  private async getPlace(id: string) {
+    const [placeResult, sources] = await Promise.all([
+      this.supabase
+        .from('saved_places')
+        .select('*')
+        .eq('id', id)
+        .eq('user_id', this.userId)
+        .single(),
+      this.listSources(id)
+    ]);
+
+    if (placeResult.error || !placeResult.data) {
+      throw toSupabaseError('read saved result', placeResult.error?.message);
+    }
+
+    return mapRowToPlace(placeResult.data as SavedPlaceRow, sources);
   }
 
   async getExportData() {
@@ -193,50 +265,56 @@ export class SupabaseSavedPlacesRepository implements SavedPlacesRepository {
     }
   }
 
-  async createPlace(place: NewPlace) {
-    const existingPlace = await this.findExistingPlace(place);
-
-    if (existingPlace) {
-      if (shouldReplaceIncompleteManualPlace(existingPlace, place)) {
-        return this.updatePlace(existingPlace.id, {
-          placeName: place.placeName,
-          address: place.address,
-          areaCity: place.areaCity,
-          category: place.category,
-          cuisineOrSpecialty: place.cuisineOrSpecialty,
-          tags: place.tags,
-          sourceInstagramUrl: place.sourceInstagramUrl,
-          placeId: place.placeId,
-          mapUrl: place.mapUrl
-        });
-      }
-
-      return existingPlace;
-    }
-
-    const { data, error } = await this.supabase
-      .from('saved_places')
-      .insert(mapPlaceToRow(place, this.userId))
-      .select()
-      .single();
+  async savePlace(place: NewPlace) {
+    const source = {
+      ...fallbackSource(place),
+      ...place.source,
+      sourceUrl: normalizeInstagramSourceUrl(
+        place.source?.sourceUrl ?? place.sourceInstagramUrl
+      )
+    };
+    const { data, error } = await this.supabase.rpc('save_place_with_source', {
+      p_place: {
+        id: place.id,
+        name: place.placeName,
+        address: place.address,
+        areaOrCity: place.areaCity,
+        category: place.category,
+        specialty: place.cuisineOrSpecialty ?? null,
+        tags: place.tags,
+        notes: place.notes ?? null,
+        providerPlaceId: place.placeId ?? null,
+        mapUrl: place.mapUrl ?? null,
+        status: place.status,
+        favorite: place.isFavorite
+      },
+      p_source: source
+    });
 
     if (error) {
-      if (error.code === '23505') {
-        const duplicatePlace = await this.findExistingPlace(place);
-
-        if (duplicatePlace) {
-          return duplicatePlace;
-        }
-      }
-
-      throw toSupabaseError('create', error.message);
+      throw toSupabaseError('source-aware save', error.message);
     }
 
-    if (!data) {
-      throw toSupabaseError('create');
+    const resultRow = (Array.isArray(data) ? data[0] : data) as
+      | { save_outcome?: unknown; saved_place_id?: unknown }
+      | null;
+
+    if (
+      !resultRow ||
+      !isSaveOutcome(resultRow.save_outcome) ||
+      typeof resultRow.saved_place_id !== 'string'
+    ) {
+      throw toSupabaseError('source-aware save', 'invalid result');
     }
 
-    return mapRowToPlace(data);
+    return {
+      outcome: resultRow.save_outcome,
+      place: await this.getPlace(resultRow.saved_place_id)
+    };
+  }
+
+  async createPlace(place: NewPlace) {
+    return (await this.savePlace(place)).place;
   }
   async updatePlace(id: string, updates: PlaceUpdate) {
     const { data, error } = await this.supabase
@@ -255,7 +333,8 @@ export class SupabaseSavedPlacesRepository implements SavedPlacesRepository {
       throw toSupabaseError('update');
     }
 
-    return mapRowToPlace(data);
+    const sources = await this.listSources(id);
+    return mapRowToPlace(data as SavedPlaceRow, sources);
   }
 
   async deletePlace(id: string) {

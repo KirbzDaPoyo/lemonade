@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Linking, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
+import { SourceCard } from '../components/source-card';
 
 import { StatePanel } from '../components/state-panel';
 import { StorageErrorBanner } from '../components/storage-error-banner';
@@ -279,8 +280,23 @@ export function V2PlaceDetailScreen({ navigation, placeId }: V2PlaceDetailScreen
       </View>
 
       <View style={styles.controlSection}>
+        <V2SectionLabel>Sources / {place.sources.length}</V2SectionLabel>
+        {place.sources.length ? (
+          place.sources.map((source) => (
+            <SourceCard
+              key={source.id}
+              onOpen={() => void openExternalUrl(source.sourceUrl, 'Instagram', () => analytics.instagramSourceOpened(source.mediaType))}
+              source={source}
+            />
+          ))
+        ) : (
+          <StatePanel title="No source details" body="No Instagram sources are attached to this place yet." />
+        )}
+      </View>
+
+
+      <View style={styles.controlSection}>
         <V2SectionLabel>Actions</V2SectionLabel>
-        <V2Button label="OPEN INSTAGRAM" onPress={() => void openExternalUrl(place.sourceInstagramUrl, 'Instagram')} variant="secondary" />
         {mapUrl ? <V2Button label="OPEN MAP" onPress={() => void openExternalUrl(mapUrl, 'Map', analytics.mapLinkOpened)} variant="secondary" /> : null}
       </View>
 

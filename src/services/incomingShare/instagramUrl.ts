@@ -39,3 +39,28 @@ export function extractInstagramUrl(
 
   return null;
 }
+
+
+export function normalizeInstagramSourceUrl(value: string) {
+  const trimmedValue = value.trim();
+
+  try {
+    const url = new URL(trimmedValue);
+    const pathSegments = url.pathname.split('/').filter(Boolean);
+
+    if (
+      url.protocol === 'https:' &&
+      INSTAGRAM_HOSTS.has(url.hostname.toLowerCase()) &&
+      pathSegments.length === 2 &&
+      INSTAGRAM_POST_PATHS.has(pathSegments[0].toLowerCase()) &&
+      /^[A-Za-z0-9_-]+$/.test(pathSegments[1])
+    ) {
+      const contentType = pathSegments[0].toLowerCase() === 'p' ? 'p' : 'reel';
+      return `https://www.instagram.com/${contentType}/${pathSegments[1]}/`;
+    }
+  } catch {
+    // Invalid URLs are rejected by the Add Place screen before persistence.
+  }
+
+  return trimmedValue;
+}

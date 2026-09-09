@@ -23,6 +23,23 @@ export type SavedPlaceRow = {
   user_id: string;
 };
 
+export type SavedPlaceSourceRow = {
+  id: string;
+  user_id: string;
+  saved_place_id: string;
+  platform: 'instagram';
+  source_url: string;
+  shortcode: string | null;
+  media_type: import('../types/place-source').PlaceSourceMediaType;
+  creator_username: string | null;
+  caption_excerpt: string | null;
+  recommended_items: string[] | null;
+  vibe_tags: string[] | null;
+  thumbnail_url: string | null;
+  published_at: string | null;
+  created_at: string;
+};
+
 export type PlaceTagRow = {
   id: string;
   name: string;

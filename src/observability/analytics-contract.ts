@@ -1,4 +1,6 @@
 import type { PlaceStatus } from '../types/place';
+import type { PlaceSaveOutcome } from '../repositories/savedPlaces/types';
+import type { PlaceSourceMediaType } from '../types/place-source';
 
 export type AnalyticsEnvironment = 'development' | 'preview' | 'production';
 export type AnalyticsFailureCategory =
@@ -69,8 +71,16 @@ export type AnalyticsEventProperties = {
     candidate_rank: number;
   };
   place_saved: { status: PlaceStatus };
+  place_save_completed: {
+    outcome: PlaceSaveOutcome;
+    source_platform: 'instagram';
+  };
   place_opened: { status: PlaceStatus };
   map_link_opened: { provider: 'google_maps' };
+  instagram_source_opened: {
+    source_platform: 'instagram';
+    media_type: PlaceSourceMediaType;
+  };
   place_status_changed: {
     previous_status: PlaceStatus;
     status: PlaceStatus;

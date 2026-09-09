@@ -4,7 +4,7 @@ Project Lemonade is an Expo app for saving cafes, restaurants, and other places 
 
 Share an Instagram link to the Android app or paste one manually. Lemonade imports public post metadata, proposes matching real-world places, and lets the signed-in user save the correct result to a private Supabase-backed collection.
 
-> Project status: Release 0.2 engineering candidate. Android acceptance is complete; physical iOS and final store-release verification remain outstanding.
+> Project status: Release 0.3 source-aware saved places database candidate. Live migration verification passed; device acceptance remains outstanding.
 
 ## Current Features
 
@@ -15,6 +15,7 @@ Share an Instagram link to the Android app or paste one manually. Lemonade impor
 - Instagram metadata import through an authenticated Supabase Edge Function and Apify
 - Google Places matching through an authenticated Supabase Edge Function
 - Candidate confirmation before a place is saved
+- Multiple bounded Instagram source references per saved place, with duplicate-safe save outcomes
 - Saved-place lifecycle states: Want to Go, Visited, and Skipped
 - An independent Favorite preference
 - User-created tags with rename, delete, assignment, and filtering
@@ -36,8 +37,8 @@ Lemonade processes only links submitted by the user. It does not read Instagram 
 | --- | --- | --- |
 | Mobile app | Expo, React Native, TypeScript | Navigation, sharing, place management, and account UI |
 | Authentication | Clerk | Sign-up, sign-in, verification, and session tokens |
-| Database | Supabase Postgres | Saved places and editable tag catalog |
-| Authorization | Supabase RLS | Isolates every user's places and tags by Clerk subject |
+| Database | Supabase Postgres | Saved places, bounded source references, and editable tag catalog |
+| Authorization | Supabase RLS | Isolates every user's places, sources, and tags by Clerk subject |
 | Server functions | Supabase Edge Functions | Authenticated access to Apify and Google Places |
 | Instagram metadata | Apify | Retrieves metadata for a submitted public post or reel |
 | Place matching | Google Places API | Returns real-world place candidates |
@@ -114,11 +115,12 @@ The current schema includes:
 
 - `saved_places`, scoped by `user_id`
 - `place_tags`, scoped by `user_id`
+- `saved_place_sources`, scoped by `user_id` and linked to an owned place
 - Per-user uniqueness constraints
 - Authenticated-only grants and Row Level Security policies
 - User-scoped tag rename and delete functions
 
-Anonymous access to saved places and tags is intentionally revoked. Existing data from the earlier no-account MVP must be assigned administratively to the correct Clerk user during migration.
+Anonymous access to saved places, source references, and tags is intentionally revoked. Existing data from the earlier no-account MVP must be assigned administratively to the correct Clerk user during migration.
 
 ## Edge Functions
 
@@ -170,9 +172,9 @@ npm run typecheck
 npx expo-doctor
 ```
 
-The regression suite covers sharing, navigation contracts, candidate selection, lifecycle and favorites, user-managed tags, Clerk ownership, RLS, authenticated Edge Functions, privacy-safe observability, export, account deletion, and the public deletion page.
+The regression suite covers sharing, navigation contracts, source normalization and metadata bounds, atomic save contracts, source-aware detail states, lifecycle and favorites, user-managed tags, Clerk ownership, RLS, authenticated Edge Functions, privacy-safe observability, export, account deletion, and the public deletion page.
 
-See [Release 0.2 operations and privacy](docs/release-0.2-operations.md) and the [Release 0.2 verification record](docs/release-0.2-verification.md).
+See the [Release 0.3 source-aware saved places record](docs/release-0.3-source-aware-saved-places.md). Release 0.2 history remains in [operations and privacy](docs/release-0.2-operations.md) and the [verification record](docs/release-0.2-verification.md).
 
 ## Project Structure
 
@@ -200,6 +202,6 @@ web/                          Static public deletion information; not deployed
 
 - Instagram import supports public post and reel URLs submitted by the user.
 - Place-search geography currently defaults to Hong Kong and can be configured for Singapore.
-- Android device acceptance is complete for Release 0.2.
+- Android device acceptance is complete for Release 0.2; Release 0.3 source behavior still requires device acceptance against the migrated database.
 - Physical iOS, large-text/screen-reader, production signing, store submission, and public-page deployment remain pending.
 - Candidate ranking is advisory; users deliberately choose a result before saving.
