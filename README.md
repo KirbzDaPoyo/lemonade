@@ -4,7 +4,7 @@ Project Lemonade is an Expo app for saving cafes, restaurants, and other places 
 
 Share an Instagram link to the Android app or paste one manually. Lemonade imports public post metadata, proposes matching real-world places, and lets the signed-in user save the correct result to a private Supabase-backed collection.
 
-> Project status: Release 0.3 source-aware saved places candidate. Live migration verification and the core Android source workflow passed; remaining release gates are documented below.
+> Project status: Release 0.4.0 internal Android build installed; development-client and standalone phone smoke tests passed according to the owner. Automated checks passed; remaining coverage is documented. See [Release 0.4 validation and acceptance](docs/release-0.4-library-discovery.md).
 
 ## Current Features
 
@@ -17,6 +17,9 @@ Share an Instagram link to the Android app or paste one manually. Lemonade impor
 - Candidate confirmation before a place is saved
 - Multiple bounded Instagram source references per saved place, with duplicate-safe save outcomes
 - Saved-place lifecycle states: Want to Go, Visited, and Skipped
+- Local token search across saved places and bounded source metadata
+- Combined status, favorite, tag, category and area filters
+- Four stable sort orders and comfortable/compact rows, with per-account local presentation preferences
 - An independent Favorite preference
 - User-created tags with rename, delete, assignment, and filtering
 - Editable notes and links to the original Instagram post and Google Maps

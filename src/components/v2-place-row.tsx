@@ -7,12 +7,13 @@ import { statusLabels } from '../utils/labels';
 import { FavoriteMark, PlaceGlyph } from './v2-marks';
 
 type V2PlaceRowProps = {
+  density?: 'comfortable' | 'compact';
   place: PlaceCard;
   index: number;
   onPress: () => void;
 };
 
-export function V2PlaceRow({ place, index, onPress }: V2PlaceRowProps) {
+export function V2PlaceRow({ place, index, onPress, density = 'comfortable' }: V2PlaceRowProps) {
   const { theme } = useAppTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
 
@@ -22,26 +23,26 @@ export function V2PlaceRow({ place, index, onPress }: V2PlaceRowProps) {
       accessibilityLabel={`${place.placeName}, ${place.areaCity}, ${statusLabels[place.status]}${place.isFavorite ? ', favorite' : ''}`}
       accessibilityRole="button"
       onPress={onPress}
-      style={({ pressed }) => [styles.row, pressed && styles.pressed]}
+      style={({ pressed }) => [styles.row, density === 'compact' && styles.compactRow, pressed && styles.pressed]}
     >
-      <View style={styles.indexColumn}>
+      <View style={[styles.indexColumn, density === 'compact' && styles.compactIndex]}>
         <Text style={styles.index}>{String(index).padStart(2, '0')}</Text>
-        <PlaceGlyph label={place.placeName} outline={index % 2 === 0} />
+        {density === 'comfortable' ? <PlaceGlyph label={place.placeName} outline={index % 2 === 0} /> : null}
       </View>
       <View style={styles.content}>
         <View style={styles.headingRow}>
           <View style={styles.headingCopy}>
-            <Text numberOfLines={1} style={styles.name}>{place.placeName}</Text>
+            <Text numberOfLines={2} style={[styles.name, density === 'compact' && styles.compactName]}>{place.placeName}</Text>
             <Text numberOfLines={1} style={styles.city}>{place.areaCity}</Text>
           </View>
           <FavoriteMark active={place.isFavorite} />
         </View>
-        <Text numberOfLines={2} style={styles.address}>{place.address}</Text>
+        <Text numberOfLines={density === 'compact' ? 1 : 2} style={styles.address}>{place.address}</Text>
         <View style={styles.statusRow}>
           <View style={[styles.statusDot, place.status === 'want_to_go' && styles.wantDot, place.status === 'visited' && styles.visitedDot]} />
           <Text style={styles.statusText}>{statusLabels[place.status]}</Text>
         </View>
-        {place.tags.length > 0 ? (
+        {density === 'comfortable' && place.tags.length > 0 ? (
           <View style={styles.tags}>
             {place.tags.slice(0, 3).map((tag, tagIndex) => (
               <View key={tag} style={[styles.tag, tagIndex === 1 && styles.violetTag]}>
@@ -56,6 +57,9 @@ export function V2PlaceRow({ place, index, onPress }: V2PlaceRowProps) {
 }
 
 const createStyles = (theme: AppTheme) => StyleSheet.create({
+  compactRow: { minHeight: 100, paddingVertical: theme.spacing.sm },
+  compactIndex: { width: 28 },
+  compactName: { fontSize: 22, lineHeight: 26 },
   row: {
     backgroundColor: theme.colors.background,
     borderBottomColor: theme.colors.border,

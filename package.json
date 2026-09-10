@@ -1,6 +1,6 @@
 {
   "name": "project-lemonade",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "private": true,
   "main": "expo-router/entry",
   "scripts": {
@@ -9,7 +9,7 @@
     "android": "expo run:android",
     "ios": "expo run:ios",
     "postinstall": "patch-package",
-    "test": "tsx --test --test-concurrency=1 tests/regression.test.ts tests/favorite-lifecycle.test.ts tests/tag-filtering.test.ts tests/user-tags.test.ts tests/incoming-share.test.ts tests/navigation.test.ts tests/user-accounts.test.ts tests/analytics-contract.test.ts tests/error-monitoring.test.ts tests/data-export.test.ts tests/account-deletion.test.ts tests/public-deletion-page.test.ts tests/source-aware-saved-places.test.ts tests/release-hygiene.test.ts",
+    "test": "tsx --test --test-concurrency=1 tests/regression.test.ts tests/favorite-lifecycle.test.ts tests/tag-filtering.test.ts tests/user-tags.test.ts tests/incoming-share.test.ts tests/navigation.test.ts tests/user-accounts.test.ts tests/analytics-contract.test.ts tests/error-monitoring.test.ts tests/data-export.test.ts tests/account-deletion.test.ts tests/public-deletion-page.test.ts tests/source-aware-saved-places.test.ts tests/release-hygiene.test.ts tests/library-view.test.ts",
     "typecheck": "tsc --noEmit"
   },
   "dependencies": {

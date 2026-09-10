@@ -1,5 +1,6 @@
-import { useEffect, useMemo, useState } from 'react';
-import { FlatList, Pressable, StyleSheet, Text, View } from 'react-native';
+import { useAuth } from '@clerk/expo';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { FlatList, Keyboard, Pressable, TextInput, StyleSheet, Text, View } from 'react-native';
 
 import { StatePanel } from '../components/state-panel';
 import { StorageErrorBanner } from '../components/storage-error-banner';
@@ -9,9 +10,11 @@ import { V2PlaceRow } from '../components/v2-place-row';
 import { AppTheme, useAppTheme } from '../design-system/theme';
 import type { AppNavigation } from '../navigation/types';
 import { analytics } from '../observability/analytics';
-import { getAssignedTagFilterOptions, matchesPlacesScreenFilters } from '../services/placeFilters';
+import { getAssignedTagFilterOptions } from '../services/placeFilters';
 import { usePlaces } from '../store/PlacesContext';
-import type { PlaceStatusFilter } from '../types/filters';
+import { clearLibraryFilters, defaultLibraryView, libraryOptions, LibraryView, selectLibraryPlaces } from '../services/library-view';
+import { useLibraryPreferences } from '../services/use-library-preferences';
+import { getUserTagKey } from '../services/tags/user-tags';
 
 type V2HomeScreenProps = { navigation: AppNavigation };
 
@@ -19,27 +22,43 @@ export function V2HomeScreen({ navigation }: V2HomeScreenProps) {
   const { theme } = useAppTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const { availableTags, isLoading, isStorageAvailable, places, retryStorage, storageError } = usePlaces();
-  const [selectedStatus, setSelectedStatus] = useState<PlaceStatusFilter>('all');
-  const [selectedTagId, setSelectedTagId] = useState<string | null>(null);
-  const [favoritesOnly, setFavoritesOnly] = useState(false);
+  const { userId } = useAuth();
+  const [preferences, updatePreferences] = useLibraryPreferences(userId);
+  const [sessionView, setSessionView] = useState<LibraryView>(defaultLibraryView);
+  const searchStarted = useRef(false);
   const tagFilterOptions = useMemo(() => getAssignedTagFilterOptions(places, availableTags), [availableTags, places]);
-  const selectedTag = tagFilterOptions.find((tag) => tag.id === selectedTagId) ?? null;
+  const categories = useMemo(() => libraryOptions(places, 'category'), [places]);
+  const areas = useMemo(() => libraryOptions(places, 'areaCity'), [places]);
+  const view = useMemo(() => ({ ...sessionView, ...preferences }), [sessionView, preferences]);
   const isInitialLoading = isLoading && places.length === 0;
 
   useEffect(() => {
-    if (selectedTagId !== null && selectedTag === null) setSelectedTagId(null);
-  }, [selectedTag, selectedTagId]);
-
-  const filteredPlaces = useMemo(
-    () => places.filter((place) => matchesPlacesScreenFilters(place, selectedStatus, selectedTag?.name ?? null, favoritesOnly)),
-    [favoritesOnly, places, selectedStatus, selectedTag?.name]
-  );
+    setSessionView(defaultLibraryView);
+    searchStarted.current = false;
+  }, [userId]);
+  useEffect(() => {
+    if (isLoading) return;
+    setSessionView(current => {
+      const tag = tagFilterOptions.find(tag => current.tag !== null && getUserTagKey(tag.name) === getUserTagKey(current.tag))?.name ?? null;
+      const category = categories.some(option => option.value === current.category) ? current.category : null;
+      const area = areas.some(option => option.value === current.area) ? current.area : null;
+      return tag === current.tag && category === current.category && area === current.area ? current : { ...current, tag, category, area };
+    });
+  }, [areas, categories, isLoading, tagFilterOptions]);
+  const filteredPlaces = useMemo(() => selectLibraryPlaces(places, view), [places, view]);
+  const clearFilters = () => { setSessionView(clearLibraryFilters); analytics.libraryFiltersCleared(); };
+  const changeQuery = (query: string) => {
+    if (query.trim() && !searchStarted.current) { searchStarted.current = true; analytics.librarySearchStarted(); }
+    setSessionView(current => ({ ...current, query }));
+  };
 
   return (
     <View style={styles.screen}>
       <FlatList
         contentContainerStyle={styles.listContent}
         contentInsetAdjustmentBehavior="automatic"
+        keyboardShouldPersistTaps="handled"
+        keyboardDismissMode="on-drag"
         data={filteredPlaces}
         keyExtractor={(place) => place.id}
         ListHeaderComponent={
@@ -79,24 +98,27 @@ export function V2HomeScreen({ navigation }: V2HomeScreenProps) {
                 <Text style={styles.addLabel}>ADD PLACE</Text>
               </Pressable>
             </View>
+            <View style={styles.searchRow}>
+              <TextInput accessibilityLabel="Search saved places" placeholder="Search saved places" placeholderTextColor={theme.colors.textMuted} value={view.query} onChangeText={changeQuery} autoCapitalize="none" autoCorrect={false} returnKeyType="search" onSubmitEditing={Keyboard.dismiss} style={styles.searchInput} />
+              {view.query ? <Pressable accessibilityLabel="Clear search" accessibilityRole="button" onPress={() => changeQuery('')} style={styles.clearSearch}><Text style={styles.clearText}>CLEAR</Text></Pressable> : null}
+            </View>
             <V2FilterRack
-              favoritesOnly={favoritesOnly}
-              onFavoritesChange={setFavoritesOnly}
-              onStatusChange={setSelectedStatus}
-              onTagChange={setSelectedTagId}
-              selectedStatus={selectedStatus}
-              selectedTagId={selectedTag?.id ?? null}
-              tags={tagFilterOptions}
+              view={view} tags={tagFilterOptions} categories={categories} areas={areas}
+              onFilterChange={(changes, type) => { setSessionView(current => ({ ...current, ...changes })); analytics.libraryFilterChanged(type); }}
+              onClearFilters={clearFilters}
+              onSortChange={sort => { updatePreferences({ ...preferences, sort }); analytics.librarySortChanged(sort); }}
+              onDensityChange={density => { updatePreferences({ ...preferences, density }); analytics.libraryDensityChanged(density); }}
             />
             {storageError ? <StorageErrorBanner message={storageError} onRetry={retryStorage} /> : null}
             {isInitialLoading ? <StatePanel loading title="Loading saved places" /> : null}
-            {!isInitialLoading ? <Text style={styles.resultsLabel}>Saved index / {filteredPlaces.length}</Text> : null}
+            {!isInitialLoading ? <Text style={styles.resultsLabel}>{filteredPlaces.length} of {places.length} places</Text> : null}
           </View>
         }
-        ListEmptyComponent={isInitialLoading ? null : <StatePanel title="No matching places" body="Choose another tag or loosen the status filter." />}
+        ListEmptyComponent={isInitialLoading || storageError ? null : places.length === 0 ? <StatePanel title="Your library is empty" body="Use Add place to save your first Instagram discovery." /> : <View><StatePanel title="No matching places" body="Try another search or clear your filters." />{view.query ? <Pressable accessibilityRole="button" onPress={() => changeQuery('')} style={styles.clearSearch}><Text style={styles.clearText}>Clear search</Text></Pressable> : null}<Pressable accessibilityRole="button" onPress={clearFilters} style={styles.clearSearch}><Text style={styles.clearText}>Clear filters</Text></Pressable></View>}
         ListFooterComponent={<View style={styles.footerEnergy}><EnergySlash /></View>}
         renderItem={({ item, index }) => (
           <V2PlaceRow
+            density={view.density}
             index={index + 1}
             onPress={() => {
               analytics.placeOpened(item.status);
@@ -111,8 +133,12 @@ export function V2HomeScreen({ navigation }: V2HomeScreenProps) {
 }
 
 const createStyles = (theme: AppTheme) => StyleSheet.create({
+  searchRow: { flexDirection: 'row', borderWidth: 1, borderColor: theme.colors.borderStrong, backgroundColor: theme.colors.input, alignItems: 'center' },
+  searchInput: { flex: 1, minWidth: 0, minHeight: 48, padding: theme.spacing.md, color: theme.colors.text, fontSize: theme.typography.body.medium },
+  clearSearch: { minHeight: 48, minWidth: 48, justifyContent: 'center', padding: theme.spacing.sm },
+  clearText: { color: theme.colors.acidInk, fontFamily: theme.typography.displayFamily, fontSize: 14 },
   screen: { backgroundColor: theme.colors.background, flex: 1 },
-  listContent: { paddingBottom: theme.spacing.huge, paddingHorizontal: theme.spacing.lg },
+  listContent: { width: '100%', maxWidth: 900, alignSelf: 'center', paddingBottom: theme.spacing.huge, paddingHorizontal: theme.spacing.lg },
   headerStack: { gap: theme.spacing.lg, paddingBottom: theme.spacing.xs },
   masthead: { alignItems: 'center', borderBottomColor: theme.colors.border, borderBottomWidth: 1, flexDirection: 'row', justifyContent: 'space-between', minHeight: 58 },
   wordmark: { color: theme.colors.acidInk, fontFamily: theme.typography.displayFamily, fontSize: 17, fontStyle: 'italic', letterSpacing: 0.8, lineHeight: 20 },

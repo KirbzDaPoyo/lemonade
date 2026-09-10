@@ -53,6 +53,11 @@ export const boundAnalyticsCandidateRank = (rank: number) =>
   Math.max(1, Math.min(20, Math.trunc(Number.isFinite(rank) ? rank : 1)));
 
 export type AnalyticsEventProperties = {
+  library_search_started: Record<string, never>;
+  library_filters_cleared: Record<string, never>;
+  library_filter_changed: { filter_type: 'status' | 'favorite' | 'tag' | 'category' | 'area' };
+  library_sort_changed: { sort: 'newest' | 'oldest' | 'updated' | 'name' };
+  library_density_changed: { density: 'comfortable' | 'compact' };
   auth_completed: { method: 'email_code' };
   share_received: { provider: 'instagram'; platform: string };
   manual_add_opened: Record<string, never>;
