@@ -74,6 +74,11 @@ const flushWithDeadline = async (deadlineMs = 600) => {
 };
 
 export const analytics = {
+  librarySearchStarted() { capture('library_search_started', {}); },
+  libraryFiltersCleared() { capture('library_filters_cleared', {}); },
+  libraryFilterChanged(filterType: AnalyticsEventProperties['library_filter_changed']['filter_type']) { capture('library_filter_changed', { filter_type: filterType }); },
+  librarySortChanged(sort: AnalyticsEventProperties['library_sort_changed']['sort']) { capture('library_sort_changed', { sort }); },
+  libraryDensityChanged(density: AnalyticsEventProperties['library_density_changed']['density']) { capture('library_density_changed', { density }); },
   isConfigured: Boolean(client),
 
   identify(userId: string) {

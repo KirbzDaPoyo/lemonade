@@ -76,16 +76,16 @@ test('only catalog tags assigned to at least one place are offered as filters', 
 });
 
 test('Places UI uses tag chips and no fixed Place dropdown', () => {
-  const home = readFileSync(resolve('.', 'src/screens/HomeScreen.tsx'), 'utf8');
-  const filterBar = readFileSync(resolve('.', 'src/components/FilterBar.tsx'), 'utf8');
+  const home = readFileSync(resolve('.', 'src/screens/v2-home-screen.tsx'), 'utf8');
+  const filterBar = readFileSync(resolve('.', 'src/components/v2-filter-rack.tsx'), 'utf8');
 
-  assert.match(home, /TagFilterBar/);
+  assert.match(home, /V2FilterRack/);
   assert.doesNotMatch(home, /selectedPlaceFilter|PlaceFilterSelection/);
   assert.doesNotMatch(filterBar, /label="Place"|selectedPlaceFilter/);
 });
 
 test('Place Detail exposes tags without primary-category or fixed-filter editors', () => {
-  const detail = readFileSync(resolve('.', 'src/screens/PlaceDetailScreen.tsx'), 'utf8');
+  const detail = readFileSync(resolve('.', 'src/screens/v2-place-detail-screen.tsx'), 'utf8');
 
   assert.match(detail, /UserTagsEditor/);
   assert.doesNotMatch(detail, /PlaceClassificationEditor|handleCategoryChange|handleFilterMembershipChange/);
