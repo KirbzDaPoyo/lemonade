@@ -24,7 +24,7 @@ const repository = readFileSync(
   'utf8'
 );
 const detailScreen = readFileSync('src/screens/v2-place-detail-screen.tsx', 'utf8');
-const candidateScreen = readFileSync('src/screens/v2-candidate-match-screen.tsx', 'utf8');
+const candidateScreen = readFileSync('src/screens/v2-candidate-match-screen.tsx', 'utf8') + readFileSync('src/navigation/inbox-completion.ts', 'utf8');
 const addScreen = readFileSync('src/screens/v2-add-place-screen.tsx', 'utf8');
 
 test('Instagram source identity ignores harmless URL variants', () => {

@@ -2,14 +2,15 @@
 
 Project Lemonade is an Expo app for saving cafes, restaurants, and other places discovered through Instagram posts and reels.
 
-Share an Instagram link to the Android app or paste one manually. Lemonade imports public post metadata, proposes matching real-world places, and lets the signed-in user save the correct result to a private Supabase-backed collection.
+Share Instagram links to a private import inbox, or paste up to 20 at a time. Capture never calls Instagram or Google. Choose Process, then Find Place to import public metadata, confirm a real-world match, and save it to your private library. Direct Add Place remains available.
 
-> Project status: Release 0.4.0 internal Android build installed; development-client and standalone phone smoke tests passed according to the owner. Automated checks passed; remaining coverage is documented. See [Release 0.4 validation and acceptance](docs/release-0.4-library-discovery.md).
+> Project status: Release 0.5.0 preview, Android build 22, installed and owner-tested. Hosted migrations and automated/API/database checks passed; the agreed final-build walkthrough passed. Larger-text and keyboard checks remain deferred, with manual versus automated coverage recorded in [Release 0.5 implementation and validation](docs/release-0.5-import-inbox.md).
 
 ## Current Features
 
 - Email-based accounts and session persistence through Clerk
 - Private, per-user saved places enforced with Supabase Row Level Security
+- Durable private import inbox with 100 pending links per user, canonical deduplication, manual retries, and share capture that preserves active imports
 - Android share-sheet support for Instagram post and reel links
 - Manual link entry without automatically starting a search
 - Instagram metadata import through an authenticated Supabase Edge Function and Apify
@@ -40,8 +41,8 @@ Lemonade processes only links submitted by the user. It does not read Instagram 
 | --- | --- | --- |
 | Mobile app | Expo, React Native, TypeScript | Navigation, sharing, place management, and account UI |
 | Authentication | Clerk | Sign-up, sign-in, verification, and session tokens |
-| Database | Supabase Postgres | Saved places, bounded source references, and editable tag catalog |
-| Authorization | Supabase RLS | Isolates every user's places, sources, and tags by Clerk subject |
+| Database | Supabase Postgres | Saved places, bounded source references, import inbox, and editable tag catalog |
+| Authorization | Supabase RLS | Isolates every user's places, sources, inbox, and tags by Clerk subject |
 | Server functions | Supabase Edge Functions | Authenticated access to Apify and Google Places |
 | Instagram metadata | Apify | Retrieves metadata for a submitted public post or reel |
 | Place matching | Google Places API | Returns real-world place candidates |
@@ -108,7 +109,7 @@ The app passes the current Clerk session token to `supabase-js`. Database polici
 
 ## Supabase Database
 
-Apply every migration in `supabase/migrations` in filename order:
+After separate deployment authorization, apply every migration in `supabase/migrations` in filename order. Apply the additive 0.5 inbox migration before distributing a 0.5 client; the 0.4 client remains compatible:
 
 ```bash
 supabase db push

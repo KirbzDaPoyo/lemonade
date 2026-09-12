@@ -1,6 +1,10 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, KeyboardAvoidingView, Platform, ScrollView, StyleSheet, Text, View } from 'react-native';
 
+import type { InboxItem } from '../types/inbox';
+import { useInbox } from '../store/inbox-context';
+import { useInboxCompletion } from '../navigation/inbox-completion';
+import { normalizeAnalyticsFailureCategory } from '../observability/analytics-contract';
 import { HazardStrip } from '../components/v2-marks';
 import { V2Button, V2TextField } from '../components/v2-controls';
 import { V2Console, V2TitleBlock, V2TopBar } from '../components/v2-layout';
@@ -17,7 +21,7 @@ import { placeSearchService } from '../services/placeSearch';
 import type { PlaceExtractionResult, PlaceSearchCandidate } from '../types/extraction';
 import type { PlaceSourceDraft } from '../types/place-source';
 
-type V2AddPlaceScreenProps = { navigation: AppNavigation; initialInstagramUrl?: string };
+type V2AddPlaceScreenProps = { navigation: AppNavigation; initialInstagramUrl?: string; inboxItem?: InboxItem };
 
 const isInstagramUrl = (value: string) => {
   try {
@@ -33,11 +37,16 @@ const prioritizeManualSearch = (extraction: PlaceExtractionResult, manualPlaceNa
   return [{ query: userHint, reason: 'manual correction', confidence: 1, parsedPlaceName: userHint, sourceSignal: 'user_hint' }, ...extraction.searchCandidates.filter((candidate) => candidate.sourceSignal !== 'user_hint')];
 };
 
-export function V2AddPlaceScreen({ navigation, initialInstagramUrl }: V2AddPlaceScreenProps) {
+export function V2AddPlaceScreen({ navigation, initialInstagramUrl, inboxItem }: V2AddPlaceScreenProps) {
   const { theme } = useAppTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const [sourceInstagramUrl, setSourceInstagramUrl] = useState(initialInstagramUrl ?? '');
-  const [manualPlaceName, setManualPlaceName] = useState('');
+  const [manualPlaceName, setManualPlaceName] = useState(inboxItem?.placeNameHint ?? '');
+  const inbox = useInbox();
+  const completeInbox = useInboxCompletion();
+  const attemptLock = useRef(false);
+  const attention = async (error: unknown) => { if (inboxItem) await inbox.markAttention(inboxItem.id, normalizeAnalyticsFailureCategory(error)); };
+  const saveHint = async () => { if (inboxItem && !(await inbox.updateHint(inboxItem.id, manualPlaceName))) Alert.alert('Hint not saved', 'Check your connection and tap Save hint to retry.'); };
   const [isFindingPlace, setIsFindingPlace] = useState(false);
   const [needsManualQuery, setNeedsManualQuery] = useState(false);
   const isMountedRef = useRef(true);
@@ -63,8 +72,9 @@ export function V2AddPlaceScreen({ navigation, initialInstagramUrl }: V2AddPlace
   ) => {
     const candidates = await placeSearchService.searchPlaces({ query: searchQuery, searchCandidates: prioritizeManualSearch(extraction, manualPlaceName), geoContext: extraction.geoContext });
     if (!isMountedRef.current) return;
+    if (!candidates.length) await attention(new Error('No match'));
     analytics.candidatesDisplayed(candidates.length);
-    navigation.navigate({ name: 'CandidateMatch', draft: { sourceInstagramUrl: source.sourceUrl, source, extraction }, candidates });
+    navigation.navigate({ name: 'CandidateMatch', draft: { inboxItemId: inboxItem?.id, sourceInstagramUrl: source.sourceUrl, source, extraction }, candidates });
   };
 
   const buildManualExtraction = (): PlaceExtractionResult => ({
@@ -86,11 +96,23 @@ export function V2AddPlaceScreen({ navigation, initialInstagramUrl }: V2AddPlace
       Alert.alert('Check the Instagram URL', 'Paste a public Instagram post or reel URL, such as https://www.instagram.com/reel/...');
       return;
     }
+    if (attemptLock.current) return;
+    attemptLock.current = true;
     setSourceInstagramUrl(instagramUrl);
     setIsFindingPlace(true);
-    analytics.importStarted();
+
     let didImportSucceed = false;
     try {
+      if (inboxItem) {
+        if (!(await inbox.beginAttempt(inboxItem.id, manualPlaceName))) {
+          Alert.alert('Could not start processing', 'Your item remains in the inbox. Retry when connected.');
+          return;
+        }
+        const existingPlaceId = await inbox.findSaved(inboxItem.sourceUrl);
+        if (existingPlaceId) { if (isMountedRef.current) await completeInbox(inboxItem.id, existingPlaceId, 'existing_source'); return; }
+      }
+      if (!isMountedRef.current) return;
+      analytics.importStarted();
       let extraction: PlaceExtractionResult | undefined;
       let source = createPlaceSourceDraft({ fallbackUrl: instagramUrl });
       const userHint = manualPlaceName.trim() || undefined;
@@ -109,6 +131,7 @@ export function V2AddPlaceScreen({ navigation, initialInstagramUrl }: V2AddPlace
           extraction
         });
       } catch (error) {
+        await attention(error);
         if (!didImportSucceed) analytics.importFailed(error);
         if (!isMountedRef.current) return;
         const message = error instanceof Error ? error.message : 'Instagram import failed.';
@@ -124,14 +147,16 @@ export function V2AddPlaceScreen({ navigation, initialInstagramUrl }: V2AddPlace
       if (!isMountedRef.current) return;
       const searchQuery = getSearchQuery(extraction, manualPlaceName);
       if (!searchQuery) {
+        await attention(new Error('No match'));
         setNeedsManualQuery(true);
         Alert.alert("I couldn't identify the place from this reel.", 'What should we search? Add a place name, then try again.');
         return;
       }
       await navigateToCandidates(extraction, searchQuery, source);
     } catch (error) {
+      await attention(error);
       if (!isMountedRef.current) return;
-      errorMonitoring.captureException(error, {
+      errorMonitoring.captureException(new Error('Place search failed'), {
         operation: 'place_search',
         category: 'search'
       });
@@ -139,6 +164,7 @@ export function V2AddPlaceScreen({ navigation, initialInstagramUrl }: V2AddPlace
       if (manualPlaceName.trim()) Alert.alert('Place search failed', message);
       else { setNeedsManualQuery(true); Alert.alert('Add a search hint', `${message} What should we search?`); }
     } finally {
+      attemptLock.current = false;
       if (isMountedRef.current) setIsFindingPlace(false);
     }
   };
@@ -153,6 +179,7 @@ export function V2AddPlaceScreen({ navigation, initialInstagramUrl }: V2AddPlace
           autoCorrect={false}
           keyboardType="url"
           label="Instagram URL"
+          editable={!inboxItem && !isFindingPlace}
           onChangeText={setSourceInstagramUrl}
           placeholder="https://www.instagram.com/reel/..."
           value={sourceInstagramUrl}
@@ -162,9 +189,13 @@ export function V2AddPlaceScreen({ navigation, initialInstagramUrl }: V2AddPlace
           hint="Adding a name can help us find the right match when Instagram details are limited."
           label={needsManualQuery ? 'Place name — required' : 'Place name — optional'}
           onChangeText={setManualPlaceName}
+          editable={!isFindingPlace}
+          maxLength={200}
+          onBlur={() => { if (!isFindingPlace) void saveHint(); }}
           placeholder="e.g. Neon Noodles"
           value={manualPlaceName}
         />
+        {inboxItem ? <V2Button compact disabled={isFindingPlace} label="SAVE HINT" onPress={() => void saveHint()} /> : null}
         {needsManualQuery ? (
           <View style={styles.recoveryNotice}>
             <Text style={styles.recoveryTitle}>SEARCH HINT NEEDED</Text>

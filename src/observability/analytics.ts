@@ -74,6 +74,14 @@ const flushWithDeadline = async (deadlineMs = 600) => {
 };
 
 export const analytics = {
+  inboxOpened() { capture('inbox_opened', {}); },
+  inboxProcessingStarted() { capture('inbox_processing_started', {}); },
+  inboxResolved() { capture('inbox_resolved', {}); },
+  inboxDismissed() { capture('inbox_dismissed', {}); },
+  inboxCleared() { capture('inbox_cleared', {}); },
+  inboxEnqueued(origin: 'share' | 'manual', counts: import('../types/inbox').CaptureSummary) {
+    capture('inbox_enqueue_completed', { origin, submitted: boundAnalyticsResultCount(counts.submitted), queued: boundAnalyticsResultCount(counts.queued), already_queued: boundAnalyticsResultCount(counts.already_queued), already_saved: boundAnalyticsResultCount(counts.already_saved), invalid: boundAnalyticsResultCount(counts.invalid), capacity_reached: boundAnalyticsResultCount(counts.capacity_reached) });
+  },
   librarySearchStarted() { capture('library_search_started', {}); },
   libraryFiltersCleared() { capture('library_filters_cleared', {}); },
   libraryFilterChanged(filterType: AnalyticsEventProperties['library_filter_changed']['filter_type']) { capture('library_filter_changed', { filter_type: filterType }); },

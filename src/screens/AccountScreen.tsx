@@ -11,6 +11,7 @@ import { analytics } from '../observability/analytics';
 import { errorMonitoring } from '../observability/error-monitoring';
 import { deleteCurrentUserData } from '../services/account/delete-account-data';
 import { sharePlaceDataExport } from '../services/export/share-place-data-export';
+import { useInbox } from '../store/inbox-context';
 import { usePlaces } from '../store/PlacesContext';
 
 const appearanceOptions: Array<{ value: ThemePreference; label: string; description: string }> = [
@@ -28,6 +29,7 @@ export function AccountScreen({ navigation }: { navigation: AppNavigation }) {
   const { getToken, signOut } = useAuth();
   const { user } = useUser();
   const { clearLocalData, getExportData } = usePlaces();
+  const inbox = useInbox();
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | undefined>();
   const [showTechnicalId, setShowTechnicalId] = useState(false);
@@ -72,7 +74,8 @@ export function AccountScreen({ navigation }: { navigation: AppNavigation }) {
     }
 
     try {
-      await sharePlaceDataExport(exportData);
+      const inboxItems = await inbox.exportItems();
+      await sharePlaceDataExport(exportData, inboxItems);
       setExportStatus('idle');
     } catch (error) {
       errorMonitoring.captureException(error, { operation: 'data_export', category: 'export' });
@@ -100,6 +103,7 @@ export function AccountScreen({ navigation }: { navigation: AppNavigation }) {
     analytics.reset();
     errorMonitoring.resetIdentity();
     clearLocalData();
+    inbox.clearLocalData();
     await signOut().catch(() => undefined);
     setShowDeletion(false);
     Alert.alert('Account deleted', 'Your Lemonade data and sign-in identity were deleted.');
@@ -190,7 +194,7 @@ export function AccountScreen({ navigation }: { navigation: AppNavigation }) {
 
       <View style={styles.module}>
         <V2SectionLabel>Data export</V2SectionLabel>
-        <Text style={styles.body}>Download a complete JSON copy of your saved places, tags, notes, statuses, favorites, dates, and source links.</Text>
+        <Text style={styles.body}>Download a complete JSON copy of your saved places, tags, notes, statuses, favorites, dates, source links, and pending inbox items (including hints and attempt metadata).</Text>
         <Text style={styles.body}>Your device's share sheet lets you choose the final destination. Lemonade replaces its temporary export file the next time you export.</Text>
         <V2Button
           disabled={exportStatus === 'exporting'}

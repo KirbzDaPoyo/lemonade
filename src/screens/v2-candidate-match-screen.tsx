@@ -1,6 +1,7 @@
 import { useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, FlatList, LayoutChangeEvent, Pressable, StyleSheet, Text, View } from 'react-native';
 
+import { useInboxCompletion, saveMessages } from '../navigation/inbox-completion';
 import { StatePanel } from '../components/state-panel';
 import { V2Button } from '../components/v2-controls';
 import { PlaceGlyph } from '../components/v2-marks';
@@ -18,13 +19,9 @@ import { categoryLabels } from '../utils/labels';
 type V2CandidateMatchScreenProps = { navigation: AppNavigation; draft: DraftPlaceEntry; candidates: PlaceCandidate[] };
 type SavePlaceInput = Omit<PlaceInput, 'source' | 'sourceInstagramUrl' | 'status' | 'isFavorite'>;
 
-const saveMessages = {
-  created_place: ['Place saved', 'This place and its first Instagram source are now in your private index.'],
-  attached_source: ['Source added', 'This post or reel was added to the place you already saved.'],
-  existing_source: ['Already saved', 'This post or reel is already attached to this place.']
-} as const;
 
 export function V2CandidateMatchScreen({ navigation, draft, candidates }: V2CandidateMatchScreenProps) {
+  const completeInbox = useInboxCompletion();
   const { theme } = useAppTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const { availableTags, savePlace: persistPlace } = usePlaces();
@@ -46,6 +43,10 @@ export function V2CandidateMatchScreen({ navigation, draft, candidates }: V2Cand
       if (result) {
         analytics.placeSaveCompleted(result.outcome);
         if (result.outcome === 'created_place') analytics.placeSaved(result.place.status);
+        if (draft.inboxItemId) {
+          await completeInbox(draft.inboxItemId, result.place.id, result.outcome);
+          return;
+        }
         navigation.replace({ name: 'PlaceDetail', placeId: result.place.id });
         const [title, message] = saveMessages[result.outcome];
         Alert.alert(title, message);

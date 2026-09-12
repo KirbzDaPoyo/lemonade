@@ -8,12 +8,14 @@ import type { AppNavigation, AppRoute } from './types';
 
 export function useAppNavigation(): AppNavigation {
   const router = useRouter();
-  const { beginManualAdd, beginSharedAdd, showCandidates } = useImportFlow();
+  const { beginInboxAdd, beginManualAdd, beginSharedAdd, showCandidates } = useImportFlow();
 
   return useMemo(() => {
     const prepareRoute = (route: AppRoute) => {
       if (route.name === 'AddPlace') {
-        if (route.initialInstagramUrl) {
+        if (route.inboxItem) {
+          beginInboxAdd(route.inboxItem);
+        } else if (route.initialInstagramUrl) {
           beginSharedAdd(route.initialInstagramUrl);
         } else {
           beginManualAdd();
@@ -27,6 +29,8 @@ export function useAppNavigation(): AppNavigation {
 
     const hrefForRoute = (route: AppRoute) => {
       switch (route.name) {
+        case 'Inbox':
+          return appRoutePaths.inbox;
         case 'Home':
           return appRoutePaths.home;
         case 'Account':
@@ -63,5 +67,5 @@ export function useAppNavigation(): AppNavigation {
         router.replace(appRoutePaths.home);
       }
     };
-  }, [beginManualAdd, beginSharedAdd, router, showCandidates]);
+  }, [beginInboxAdd, beginManualAdd, beginSharedAdd, router, showCandidates]);
 }

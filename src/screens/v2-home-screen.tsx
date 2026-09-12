@@ -2,6 +2,8 @@ import { useAuth } from '@clerk/expo';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, Keyboard, Pressable, TextInput, StyleSheet, Text, View } from 'react-native';
 
+import { useInbox } from '../store/inbox-context';
+import { V2Button } from '../components/v2-controls';
 import { StatePanel } from '../components/state-panel';
 import { StorageErrorBanner } from '../components/storage-error-banner';
 import { V2FilterRack } from '../components/v2-filter-rack';
@@ -19,6 +21,7 @@ import { getUserTagKey } from '../services/tags/user-tags';
 type V2HomeScreenProps = { navigation: AppNavigation };
 
 export function V2HomeScreen({ navigation }: V2HomeScreenProps) {
+  const { items: inboxItems } = useInbox();
   const { theme } = useAppTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const { availableTags, isLoading, isStorageAvailable, places, retryStorage, storageError } = usePlaces();
@@ -98,6 +101,7 @@ export function V2HomeScreen({ navigation }: V2HomeScreenProps) {
                 <Text style={styles.addLabel}>ADD PLACE</Text>
               </Pressable>
             </View>
+            <V2Button compact variant="ghost" label={`INBOX / ${inboxItems.length}`} onPress={() => navigation.navigate({ name: 'Inbox' })} />
             <View style={styles.searchRow}>
               <TextInput accessibilityLabel="Search saved places" placeholder="Search saved places" placeholderTextColor={theme.colors.textMuted} value={view.query} onChangeText={changeQuery} autoCapitalize="none" autoCorrect={false} returnKeyType="search" onSubmitEditing={Keyboard.dismiss} style={styles.searchInput} />
               {view.query ? <Pressable accessibilityLabel="Clear search" accessibilityRole="button" onPress={() => changeQuery('')} style={styles.clearSearch}><Text style={styles.clearText}>CLEAR</Text></Pressable> : null}
