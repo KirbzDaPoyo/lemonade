@@ -53,6 +53,12 @@ export const boundAnalyticsCandidateRank = (rank: number) =>
   Math.max(1, Math.min(20, Math.trunc(Number.isFinite(rank) ? rank : 1)));
 
 export type AnalyticsEventProperties = {
+  inbox_opened: Record<string, never>;
+  inbox_processing_started: Record<string, never>;
+  inbox_resolved: Record<string, never>;
+  inbox_dismissed: Record<string, never>;
+  inbox_cleared: Record<string, never>;
+  inbox_enqueue_completed: { origin: 'share' | 'manual'; submitted: number; queued: number; already_queued: number; already_saved: number; invalid: number; capacity_reached: number };
   library_search_started: Record<string, never>;
   library_filters_cleared: Record<string, never>;
   library_filter_changed: { filter_type: 'status' | 'favorite' | 'tag' | 'category' | 'area' };

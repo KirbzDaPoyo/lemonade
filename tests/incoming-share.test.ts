@@ -42,9 +42,9 @@ test('rejects unsafe or unsupported Instagram-like URLs', () => {
   );
 });
 
-test('incoming shares prefill the URL without starting a search automatically', () => {
+test('incoming shares enqueue without starting a search automatically', () => {
   const coordinatorSource = readFileSync('src/navigation/share-coordinator.tsx', 'utf8');
-  const addPlaceSource = readFileSync('src/screens/AddPlaceScreen.tsx', 'utf8');
+  const addPlaceSource = readFileSync('src/screens/v2-add-place-screen.tsx', 'utf8');
 
   assert.equal(
     getIncomingInstagramUrl(
@@ -53,7 +53,7 @@ test('incoming shares prefill the URL without starting a search automatically', 
     ),
     'https://www.instagram.com/reel/Shared_456/'
   );
-  assert.match(coordinatorSource, /beginSharedAdd\(instagramUrl\)/);
+  assert.match(coordinatorSource, /enqueue\(url, 'share'\)/);
   assert.match(coordinatorSource, /resetShareIntent\(\)/);
   assert.doesNotMatch(coordinatorSource, /autoStart/);
   assert.doesNotMatch(addPlaceSource, /handleFindPlace\(initialInstagramUrl\)/);

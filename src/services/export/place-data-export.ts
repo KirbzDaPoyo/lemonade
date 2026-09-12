@@ -1,13 +1,14 @@
 import type { PlaceCard, PlaceTag } from '../../types/place';
 
 export const PLACE_DATA_EXPORT_FORMAT = 'project-lemonade-data-export' as const;
-export const PLACE_DATA_EXPORT_SCHEMA_VERSION = 2 as const;
+export const PLACE_DATA_EXPORT_SCHEMA_VERSION = 3 as const;
 
 export type PlaceDataExport = {
   format: typeof PLACE_DATA_EXPORT_FORMAT;
   schemaVersion: typeof PLACE_DATA_EXPORT_SCHEMA_VERSION;
   exportedAt: string;
   data: {
+    importInboxItems: import('../../types/inbox').InboxItem[];
     savedPlaces: Array<{
       id: string;
       name: string;
@@ -51,12 +52,14 @@ export type PlaceDataExport = {
 export const createPlaceDataExport = (
   places: PlaceCard[],
   tags: PlaceTag[],
-  exportedAt = new Date().toISOString()
+  exportedAt = new Date().toISOString(),
+  inboxItems: import('../../types/inbox').InboxItem[] = []
 ): PlaceDataExport => ({
   format: PLACE_DATA_EXPORT_FORMAT,
   schemaVersion: PLACE_DATA_EXPORT_SCHEMA_VERSION,
   exportedAt,
   data: {
+    importInboxItems: inboxItems.map(item => ({ id: item.id, sourceUrl: item.sourceUrl, origin: item.origin, status: item.status, placeNameHint: item.placeNameHint, failureCategory: item.failureCategory, attemptCount: item.attemptCount, lastAttemptAt: item.lastAttemptAt, createdAt: item.createdAt, updatedAt: item.updatedAt })),
     savedPlaces: places
       .map((place) => ({
         id: place.id,

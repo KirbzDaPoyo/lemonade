@@ -147,6 +147,8 @@ test('V2 home callbacks combine filters, clear search independently, and recompu
   let session = { ...base }; let preferences = { sort: 'newest', density: 'comfortable' }; let records = [place()];
   const events: any[] = [];
   const { V2HomeScreen } = load('src/screens/v2-home-screen.tsx', {
+    '../store/inbox-context': { useInbox: () => ({ items: [] }) },
+    '../components/v2-controls': { V2Button: 'V2Button' },
     '@clerk/expo': { useAuth: () => ({ userId: 'test' }) },
     react: { useMemo: (fn: any) => fn(), useState: () => [session, (value: any) => { session = typeof value === 'function' ? value(session) : value; }], useRef: () => ({ current: false }), useEffect: () => {} },
     'react-native': { ...rn, FlatList: 'FlatList', TextInput: 'TextInput', Keyboard: { dismiss() {} } },

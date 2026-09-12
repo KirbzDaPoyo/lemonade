@@ -5,6 +5,7 @@ import { AppRecoveryBoundary } from '../../src/components/app-recovery-boundary'
 import { useAppTheme } from '../../src/design-system/theme';
 import { ImportFlowProvider } from '../../src/navigation/import-flow-context';
 import { AuthenticatedShareCoordinator } from '../../src/navigation/share-coordinator';
+import { InboxProvider } from '../../src/store/inbox-context';
 import { PlacesProvider } from '../../src/store/PlacesContext';
 
 export default function AuthenticatedLayout() {
@@ -21,17 +22,19 @@ export default function AuthenticatedLayout() {
       operation="authenticated_navigation"
       title="Your library paused"
     >
-      <PlacesProvider accessTokenProvider={getToken} userId={userId}>
-        <ImportFlowProvider>
-          <AuthenticatedShareCoordinator />
-          <Stack
-            screenOptions={{
-              animation: 'slide_from_right',
-              contentStyle: { backgroundColor: theme.colors.background },
-              headerShown: false
-            }}
-          />
-        </ImportFlowProvider>
+      <PlacesProvider key={userId} accessTokenProvider={getToken} userId={userId}>
+        <InboxProvider key={userId} userId={userId} accessTokenProvider={getToken}>
+          <ImportFlowProvider>
+            <AuthenticatedShareCoordinator />
+            <Stack
+              screenOptions={{
+                animation: 'slide_from_right',
+                contentStyle: { backgroundColor: theme.colors.background },
+                headerShown: false
+              }}
+            />
+          </ImportFlowProvider>
+        </InboxProvider>
       </PlacesProvider>
     </AppRecoveryBoundary>
   );

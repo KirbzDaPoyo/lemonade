@@ -4,6 +4,7 @@ import { Platform } from 'react-native';
 import * as Sentry from '@sentry/react-native';
 
 export type ErrorOperation =
+  | 'inbox_storage'
   | 'preference_read'
   | 'preference_write'
   | 'account_deletion'

@@ -1,5 +1,6 @@
 export const appRoutePaths = {
   home: '/',
+  inbox: '/inbox',
   account: '/account',
   addPlace: '/add-place',
   matchPlace: '/match-place'
