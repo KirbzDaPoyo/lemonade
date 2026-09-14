@@ -2,6 +2,8 @@ import { DraftPlaceEntry, PlaceCandidate } from '../types/place';
 
 export type AppRoute =
   | { name: 'Home' }
+  | { name: 'Plans'; addPlaceId?: string }
+  | { name: 'PlanDetail'; planId: string }
   | { name: 'Inbox' }
   | { name: 'Account' }
   | {

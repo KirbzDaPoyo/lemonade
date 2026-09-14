@@ -33,9 +33,9 @@ test('hydration mapping excludes raw ownership and deterministic newest ordering
   assert.deepEqual(mapped,item);
   assert.deepEqual(sortInbox([item,{...item,id:'two'},{...item,id:'old',createdAt:'2025'}]).map(i=>i.id), ['two','one','old']);
 });
-test('export schema 3 contains only explicit stored inbox fields and retains places/sources', () => {
+test('export schema 4 contains only explicit stored inbox fields and retains places/sources', () => {
   const exported = createPlaceDataExport([], [], 'now', [{...item, raw:'secret'} as any]);
-  assert.equal(exported.schemaVersion,3); assert.deepEqual(exported.data.importInboxItems,[item]);
+  assert.equal(exported.schemaVersion,4); assert.deepEqual(exported.data.importInboxItems,[item]);
   assert.deepEqual(exported.data.savedPlaces,[]); assert.ok(!JSON.stringify(exported).includes('secret'));
 });
 test('inbox identity survives candidates and resets for direct manual entry', () => {

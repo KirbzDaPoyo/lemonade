@@ -34,6 +34,15 @@ const { randomBytes } = require('node:crypto');
       console.log('PASS: complete inbox SQL assertion fixture');
     } finally { await db.end(); }
     console.log(execFileSync(process.execPath, ['script/verify-inbox-concurrency.cjs'], { windowsHide: true, encoding: 'utf8', timeout: 60000, env: { ...process.env, INBOX_TEST_DATABASE_URL: address } }));
+    console.log(execFileSync(process.execPath, ['script/verify-plans-database.cjs'], { windowsHide: true, encoding: 'utf8', timeout: 60000, env: { ...process.env, INBOX_TEST_DATABASE_URL: address } }));
+    try {
+      const report = execFileSync('powershell.exe', ['-NoProfile', '-Command', 'npx --no-install supabase db advisors --db-url postgresql://postgres@127.0.0.1:55432/postgres?sslmode=disable --type all'], {windowsHide:true,encoding:'utf8',timeout:60000});
+      fs.writeFileSync('dist/release-0.6-advisors.log', report);
+      console.log('Advisor output saved to dist/release-0.6-advisors.log');
+    } catch (error) {
+      fs.writeFileSync('dist/release-0.6-advisors.log', String(error.stdout || '') + String(error.stderr || error.message));
+      console.log('LIMIT: Supabase advisors unavailable on standalone local PostgreSQL; see advisor log.');
+    }
     const secret = randomBytes(48).toString('hex');
     rest = spawn(path.join(os.tmpdir(), 'lemonade-inbox-validation/postgrest/postgrest.exe'), [], {
       windowsHide: true, stdio: ['ignore', 'ignore', 'pipe'],
@@ -48,6 +57,7 @@ const { randomBytes } = require('node:crypto');
     }
     if (!ready) throw Error('PostgREST failed to start: ' + logs);
     console.log(execFileSync(process.execPath, ['node_modules/tsx/dist/cli.mjs', 'script/verify-inbox-api.ts'], { windowsHide: true, encoding: 'utf8', timeout: 60000, env: { ...process.env, INBOX_TEST_REST_URL: 'http://127.0.0.1:55433', INBOX_TEST_JWT_SECRET: secret } }));
+    console.log(execFileSync(process.execPath, ['node_modules/tsx/dist/cli.mjs', 'script/verify-plans-api.ts'], { windowsHide: true, encoding: 'utf8', timeout: 60000, env: { ...process.env, INBOX_TEST_REST_URL: 'http://127.0.0.1:55433', INBOX_TEST_JWT_SECRET: secret } }));
   } finally {
     if (rest && rest.exitCode === null) { rest.kill(); await new Promise(resolve => rest.once('exit', resolve)); }
     if (started) run('pg_ctl', ['-D', data, '-m', 'fast', '-w', 'stop']);

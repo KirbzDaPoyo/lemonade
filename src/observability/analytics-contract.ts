@@ -53,6 +53,8 @@ export const boundAnalyticsCandidateRank = (rank: number) =>
   Math.max(1, Math.min(20, Math.trunc(Number.isFinite(rank) ? rank : 1)));
 
 export type AnalyticsEventProperties = {
+  plan_action: { action: 'created' | 'place_added' | 'place_removed' | 'picker_used' | 'completed' | 'reopened' };
+  map_handoff_opened: { action: 'map' | 'directions' };
   inbox_opened: Record<string, never>;
   inbox_processing_started: Record<string, never>;
   inbox_resolved: Record<string, never>;

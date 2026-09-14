@@ -1,5 +1,6 @@
+import { usePlans } from '../store/plans-context';
 import { useAuth, useUser } from '@clerk/expo';
-import { useMemo, useState } from 'react';
+import { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
 
@@ -30,6 +31,10 @@ export function AccountScreen({ navigation }: { navigation: AppNavigation }) {
   const { user } = useUser();
   const { clearLocalData, getExportData } = usePlaces();
   const inbox = useInbox();
+  const plans = usePlans();
+  const exportAccount = useRef(user?.id);
+  exportAccount.current = user?.id;
+  useEffect(() => () => { exportAccount.current = undefined; }, []);
   const [isSigningOut, setIsSigningOut] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | undefined>();
   const [showTechnicalId, setShowTechnicalId] = useState(false);
@@ -65,6 +70,7 @@ export function AccountScreen({ navigation }: { navigation: AppNavigation }) {
 
 
   const handleExport = async () => {
+    const exportingUser = user?.id;
     setExportStatus('exporting');
     const exportData = await getExportData();
 
@@ -75,7 +81,9 @@ export function AccountScreen({ navigation }: { navigation: AppNavigation }) {
 
     try {
       const inboxItems = await inbox.exportItems();
-      await sharePlaceDataExport(exportData, inboxItems);
+      const diningPlans = await plans.exportPlans();
+      if (!exportingUser || exportAccount.current !== exportingUser) return;
+      await sharePlaceDataExport(exportData, inboxItems, diningPlans);
       setExportStatus('idle');
     } catch (error) {
       errorMonitoring.captureException(error, { operation: 'data_export', category: 'export' });
@@ -96,7 +104,7 @@ export function AccountScreen({ navigation }: { navigation: AppNavigation }) {
     } catch (error) {
       errorMonitoring.captureException(error, { operation: 'account_deletion', category: 'account' });
       setDeletionPhase('partial');
-      setDeletionMessage('Your saved places and tags were deleted, but your Clerk account was not. Retry identity deletion below without recreating any data.');
+      setDeletionMessage('Your saved places, tags, inbox items, and outing plans were deleted, but your Clerk account was not. Retry identity deletion below without recreating any data.');
       return;
     }
 
@@ -104,6 +112,7 @@ export function AccountScreen({ navigation }: { navigation: AppNavigation }) {
     errorMonitoring.resetIdentity();
     clearLocalData();
     inbox.clearLocalData();
+    plans.clearLocalData();
     await signOut().catch(() => undefined);
     setShowDeletion(false);
     Alert.alert('Account deleted', 'Your Lemonade data and sign-in identity were deleted.');
@@ -194,7 +203,7 @@ export function AccountScreen({ navigation }: { navigation: AppNavigation }) {
 
       <View style={styles.module}>
         <V2SectionLabel>Data export</V2SectionLabel>
-        <Text style={styles.body}>Download a complete JSON copy of your saved places, tags, notes, statuses, favorites, dates, source links, and pending inbox items (including hints and attempt metadata).</Text>
+        <Text style={styles.body}>Download a complete JSON copy of your saved places, tags, notes, statuses, favorites, dates, source links, outing plans and their membership, and pending inbox items (including hints and attempt metadata).</Text>
         <Text style={styles.body}>Your device's share sheet lets you choose the final destination. Lemonade replaces its temporary export file the next time you export.</Text>
         <V2Button
           disabled={exportStatus === 'exporting'}
@@ -228,7 +237,7 @@ export function AccountScreen({ navigation }: { navigation: AppNavigation }) {
 
       <View style={[styles.module, styles.dangerModule]}>
         <V2SectionLabel color="pink">Delete account</V2SectionLabel>
-        <Text style={styles.body}>Permanently delete your saved places, tags, notes, preferences, and Clerk sign-in identity. This cannot be undone.</Text>
+        <Text style={styles.body}>Permanently delete your saved places, sources, tags, notes, inbox items, outing plans, preferences, and Clerk sign-in identity. This cannot be undone.</Text>
         <V2Button label="DELETE ACCOUNT" onPress={() => setShowDeletion(true)} variant="danger" />
       </View>
     </ScrollView>
@@ -244,7 +253,7 @@ export function AccountScreen({ navigation }: { navigation: AppNavigation }) {
           />
           <View style={styles.deletionSummary}>
             <V2SectionLabel color="pink">What will be deleted</V2SectionLabel>
-            <Text style={styles.body}>• All saved places, tags, notes, statuses, and favorites</Text>
+            <Text style={styles.body}>• All saved places, sources, tags, notes, statuses, favorites, inbox items, and outing plans</Text>
             <Text style={styles.body}>• Your Clerk account and ability to sign in with this identity</Text>
           </View>
 

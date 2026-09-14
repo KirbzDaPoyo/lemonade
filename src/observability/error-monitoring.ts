@@ -4,6 +4,7 @@ import { Platform } from 'react-native';
 import * as Sentry from '@sentry/react-native';
 
 export type ErrorOperation =
+  | 'plan_storage'
   | 'inbox_storage'
   | 'preference_read'
   | 'preference_write'
@@ -41,7 +42,7 @@ const build = Application.nativeBuildVersion ?? 'unknown';
 const release = `project-lemonade@${version}+${build}`;
 
 const sensitiveKey =
-  /(?:authorization|auth|token|cookie|email|caption|note|source|url|uri|query|request|response|body|place|address|search|identifier)/i;
+  /(?:plan|title|authorization|auth|token|cookie|email|caption|note|source|url|uri|query|request|response|body|place|address|search|identifier)/i;
 const emailValue = /\b[^\s@]+@[^\s@]+\.[^\s@]+\b/g;
 const urlValue = /https?:\/\/\S+/gi;
 const bearerValue = /bearer\s+[a-z0-9._~+/=-]+/gi;

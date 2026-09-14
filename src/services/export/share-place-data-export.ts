@@ -9,7 +9,7 @@ const EXPORT_FILE_NAME = 'project-lemonade-data-export.json';
 export const sharePlaceDataExport = async ({
   places,
   tags
-}: SavedPlacesExportData, inboxItems: import('../../types/inbox').InboxItem[] = []) => {
+}: SavedPlacesExportData, inboxItems: import('../../types/inbox').InboxItem[] = [], plans: import('../../types/dining-plan').DiningPlan[] = []) => {
   if (!(await Sharing.isAvailableAsync())) {
     throw new Error('File sharing is not available on this device.');
   }
@@ -22,7 +22,7 @@ export const sharePlaceDataExport = async ({
 
   exportFile.create();
   exportFile.write(
-    serializePlaceDataExport(createPlaceDataExport(places, tags, undefined, inboxItems))
+    serializePlaceDataExport(createPlaceDataExport(places, tags, undefined, inboxItems, plans))
   );
 
   await Sharing.shareAsync(exportFile.uri, {

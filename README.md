@@ -4,9 +4,12 @@ Project Lemonade is an Expo app for saving cafes, restaurants, and other places 
 
 Share Instagram links to a private import inbox, or paste up to 20 at a time. Capture never calls Instagram or Google. Choose Process, then Find Place to import public metadata, confirm a real-world match, and save it to your private library. Direct Add Place remains available.
 
-> Project status: Release 0.5.0 preview, Android build 22, installed and owner-tested. Hosted migrations and automated/API/database checks passed; the agreed final-build walkthrough passed. Larger-text and keyboard checks remain deferred, with manual versus automated coverage recorded in [Release 0.5 implementation and validation](docs/release-0.5-import-inbox.md).
+> Project status: Release 0.6.0 preview installed and owner-tested. Automated checks pass and hosted migrations are applied. The owner walkthrough reports 19 passes and one explicitly skipped Maps fallback device check; general UI improvements are deferred beyond 0.6. See [Release 0.6 implementation and verification](docs/release-0.6-outing-plans.md) for evidence and limitations.
 
 ## Current Features
+
+- Private outing plans with up to 20 saved places, comparison, completion/reopening, and local Pick for me
+- Google Maps and directions handoff using saved Place IDs or validated fallbacks, without location permission or provider lookups
 
 - Email-based accounts and session persistence through Clerk
 - Private, per-user saved places enforced with Supabase Row Level Security
@@ -28,7 +31,7 @@ Share Instagram links to a private import inbox, or paste up to 20 at a time. Ca
 - Light, dark, and system appearance with persisted preference
 - Expo Router navigation with protected routes and native Android Back behavior
 - Privacy-scoped PostHog product analytics and scrubbed Sentry error monitoring
-- Versioned JSON export through the native share sheet
+- Schema-4 JSON export including outing plans and ordered memberships through the native share sheet
 - Authenticated account and data deletion with explicit partial-failure handling
 - A static, undeployed public account-deletion information page
 - Reusable EAS development clients for standalone device testing
@@ -41,8 +44,8 @@ Lemonade processes only links submitted by the user. It does not read Instagram 
 | --- | --- | --- |
 | Mobile app | Expo, React Native, TypeScript | Navigation, sharing, place management, and account UI |
 | Authentication | Clerk | Sign-up, sign-in, verification, and session tokens |
-| Database | Supabase Postgres | Saved places, bounded source references, import inbox, and editable tag catalog |
-| Authorization | Supabase RLS | Isolates every user's places, sources, inbox, and tags by Clerk subject |
+| Database | Supabase Postgres | Saved places, bounded source references, import inbox, outing plans, and editable tag catalog |
+| Authorization | Supabase RLS | Isolates every user's places, sources, inbox, plans, and tags by Clerk subject |
 | Server functions | Supabase Edge Functions | Authenticated access to Apify and Google Places |
 | Instagram metadata | Apify | Retrieves metadata for a submitted public post or reel |
 | Place matching | Google Places API | Returns real-world place candidates |

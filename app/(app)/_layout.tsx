@@ -1,3 +1,4 @@
+import { PlansProvider } from '../../src/store/plans-context';
 import { useAuth } from '@clerk/expo';
 import { Redirect, Stack } from 'expo-router';
 
@@ -24,6 +25,7 @@ export default function AuthenticatedLayout() {
     >
       <PlacesProvider key={userId} accessTokenProvider={getToken} userId={userId}>
         <InboxProvider key={userId} userId={userId} accessTokenProvider={getToken}>
+          <PlansProvider key={userId} userId={userId} accessTokenProvider={getToken}>
           <ImportFlowProvider>
             <AuthenticatedShareCoordinator />
             <Stack
@@ -33,7 +35,7 @@ export default function AuthenticatedLayout() {
                 headerShown: false
               }}
             />
-          </ImportFlowProvider>
+          </ImportFlowProvider></PlansProvider>
         </InboxProvider>
       </PlacesProvider>
     </AppRecoveryBoundary>

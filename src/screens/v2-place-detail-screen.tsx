@@ -1,3 +1,4 @@
+import { MapButtons } from '../components/map-buttons';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Linking, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -189,7 +190,7 @@ export function V2PlaceDetailScreen({ navigation, placeId }: V2PlaceDetailScreen
   }
 
   const isUpdating = pendingStatus !== null || isUpdatingFavorite || pendingTagAction !== null;
-  const mapUrl = place.mapUrl;
+
 
   return (
     <>
@@ -297,7 +298,7 @@ export function V2PlaceDetailScreen({ navigation, placeId }: V2PlaceDetailScreen
 
       <View style={styles.controlSection}>
         <V2SectionLabel>Actions</V2SectionLabel>
-        {mapUrl ? <V2Button label="OPEN MAP" onPress={() => void openExternalUrl(mapUrl, 'Map', analytics.mapLinkOpened)} variant="secondary" /> : null}
+        <MapButtons place={place} /><V2Button label="Add to plan" onPress={() => navigation.navigate({ name: 'Plans', addPlaceId: place.id })} variant="secondary" />
       </View>
 
       <View style={styles.detailsSection}>

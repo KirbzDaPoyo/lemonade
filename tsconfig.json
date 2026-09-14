@@ -16,6 +16,6 @@
     "**/*.tsx"
   ],
   "exclude": [
-    "supabase/functions"
+    "supabase/functions", "dist"
   ]
 }
