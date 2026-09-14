@@ -1,3 +1,4 @@
+import { usePlans } from '../store/plans-context';
 import { useAuth } from '@clerk/expo';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { FlatList, Keyboard, Pressable, TextInput, StyleSheet, Text, View } from 'react-native';
@@ -21,6 +22,7 @@ import { getUserTagKey } from '../services/tags/user-tags';
 type V2HomeScreenProps = { navigation: AppNavigation };
 
 export function V2HomeScreen({ navigation }: V2HomeScreenProps) {
+  const { plans } = usePlans();
   const { items: inboxItems } = useInbox();
   const { theme } = useAppTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
@@ -102,6 +104,7 @@ export function V2HomeScreen({ navigation }: V2HomeScreenProps) {
               </Pressable>
             </View>
             <V2Button compact variant="ghost" label={`INBOX / ${inboxItems.length}`} onPress={() => navigation.navigate({ name: 'Inbox' })} />
+            <V2Button compact variant="ghost" label={'Plans' + (plans.filter(p => p.status === 'active').length ? ' / ' + plans.filter(p => p.status === 'active').length : '')} onPress={() => navigation.navigate({ name: 'Plans' })} />
             <View style={styles.searchRow}>
               <TextInput accessibilityLabel="Search saved places" placeholder="Search saved places" placeholderTextColor={theme.colors.textMuted} value={view.query} onChangeText={changeQuery} autoCapitalize="none" autoCorrect={false} returnKeyType="search" onSubmitEditing={Keyboard.dismiss} style={styles.searchInput} />
               {view.query ? <Pressable accessibilityLabel="Clear search" accessibilityRole="button" onPress={() => changeQuery('')} style={styles.clearSearch}><Text style={styles.clearText}>CLEAR</Text></Pressable> : null}

@@ -167,6 +167,8 @@ export const analytics = {
   placeOpened(status: AnalyticsEventProperties['place_opened']['status']) {
     capture('place_opened', { status });
   },
+  planAction(action: AnalyticsEventProperties['plan_action']['action']) { if (['created','place_added','place_removed','picker_used','completed','reopened'].includes(action)) capture('plan_action', { action }); },
+  mapHandoffOpened(action: 'map' | 'directions') { if (action === 'map' || action === 'directions') capture('map_handoff_opened', { action }); },
   mapLinkOpened() {
     capture('map_link_opened', { provider: 'google_maps' });
   },

@@ -73,7 +73,7 @@ export function V2Button({
         ]}
       >
         <Text
-          numberOfLines={1}
+
           style={[
             styles.buttonLabel,
             variant === 'primary' && styles.primaryLabel,
@@ -141,6 +141,8 @@ const createStyles = (theme: AppTheme) => StyleSheet.create({
     color: theme.colors.text,
     fontFamily: theme.typography.displayFamily,
     fontSize: 16,
+    textAlign: 'center',
+    flexShrink: 1,
     letterSpacing: 0.7,
     textTransform: 'uppercase'
   },

@@ -1,0 +1,43 @@
+import assert from 'node:assert/strict';
+import { createHmac, randomUUID } from 'node:crypto';
+import { createClient } from '@supabase/supabase-js';
+import { PlansRepository } from '../src/repositories/plans/plans-repository';
+async function main() {
+    const base = process.env.INBOX_TEST_REST_URL!, secret = process.env.INBOX_TEST_JWT_SECRET!;
+    assert.ok(base && ['localhost', '127.0.0.1'].includes(new URL(base).hostname));
+    assert.ok(secret?.length >= 32);
+    const owner = 'plans-api-' + randomUUID(), stranger = 'plans-api-' + randomUUID();
+    const token = (sub: string) => { const e = (v: object) => Buffer.from(JSON.stringify(v)).toString('base64url'); const body = e({ alg: 'HS256', typ: 'JWT' }) + '.' + e({ sub, role: 'authenticated', exp: Math.floor(Date.now() / 1000) + 300 }); return body + '.' + createHmac('sha256', secret).update(body).digest('base64url'); };
+    const api = (sub: string) => createClient(base, 'local-fixture', { accessToken: async () => token(sub), auth: { persistSession: false, autoRefreshToken: false, detectSessionInUrl: false }, global: { fetch: (input, init) => fetch(String(input).replace('/rest/v1/', '/'), init) } });
+    const a = api(owner), b = api(stranger), repo = new PlansRepository(a, owner), other = new PlansRepository(b, stranger);
+    const id = randomUUID();
+    for (const table of ['dining_plans', 'dining_plan_items'])
+        assert.equal((await fetch(base + '/' + table + '?select=id')).status, 401);
+    await repo.create('Meal', id);
+    await repo.create('Meal', id);
+    assert.equal((await repo.list()).length, 1);
+    assert.deepEqual(await other.list(), []);
+    await repo.update(id, { title: 'Renamed' });
+    await repo.update(id, { status: 'completed' });
+    assert.ok((await repo.list())[0].completedAt);
+    await repo.update(id, { status: 'active' });
+    assert.equal((await repo.list())[0].completedAt, null);
+    await assert.rejects(other.update(id, { title: 'Forge' }));
+    await other.remove(id);
+    assert.equal((await repo.list()).length, 1);
+    assert.ok((await b.from('dining_plans').insert({ id: randomUUID(), user_id: owner, title: 'Forge' })).error);
+    assert.ok((await a.from('dining_plans').update({ user_id: stranger }).eq('id', id)).error);
+    const saved = await a.from('saved_places').insert({ id: owner, user_id: owner, name: 'Local', address: 'Test', area_or_city: 'Test', category: 'cafe', source_url: 'https://www.instagram.com/p/fixture/' });
+    assert.equal(saved.error, null);
+    await repo.add(id, owner);
+    assert.deepEqual((await repo.list())[0].placeIds, [owner]);
+    await assert.rejects(repo.add(id, owner), /Already/);
+    await assert.rejects(other.add(id, owner));
+    await repo.removePlace(id, owner);
+    assert.deepEqual((await repo.list())[0].placeIds, []);
+    await repo.add(id, owner);
+    assert.equal((await a.rpc('delete_current_user_data')).error, null);
+    assert.deepEqual(await repo.list(), []);
+    console.log('PASS: plans repository over signed local HTTP: idempotent create, mapping, rename, completion/reopen, membership add/remove/duplicate, anonymous and cross-account rejection, account deletion');
+}
+main().catch(e => { console.error(e); throw e; });

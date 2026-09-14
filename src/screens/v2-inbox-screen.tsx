@@ -1,6 +1,6 @@
 import { useFocusEffect, useRouter } from 'expo-router';
 import { useCallback, useMemo, useRef, useState } from 'react';
-import { Alert, FlatList, KeyboardAvoidingView, Platform, StyleSheet, Text, View } from 'react-native';
+import { Alert, BackHandler, Keyboard, FlatList, KeyboardAvoidingView, Platform, StyleSheet, Text, View } from 'react-native';
 import { StatePanel } from '../components/state-panel';
 import { V2Button, V2TextField } from '../components/v2-controls';
 import { V2TitleBlock, V2TopBar } from '../components/v2-layout';
@@ -28,6 +28,12 @@ export function V2InboxScreen({ navigation }: { navigation: AppNavigation }) {
     lock.current = true; setBusy(true);
     try { await action(); } finally { lock.current = false; setBusy(false); }
   };
+  const leave = useCallback(() => {
+    if (Keyboard.isVisible()) { Keyboard.dismiss(); return; }
+    if (text.trim()) { Alert.alert('Discard pasted links?', 'Your queued inbox and active import are kept.', [{ text: 'Keep editing', style: 'cancel' }, { text: 'Discard', style: 'destructive', onPress: navigation.goBack }]); return; }
+    navigation.goBack();
+  }, [text, navigation]);
+  useFocusEffect(useCallback(() => { const handler = BackHandler.addEventListener('hardwareBackPress', () => { leave(); return true; }); return () => handler.remove(); }, [leave]));
   const capture = () => void run(async () => {
     try {
       const { summary, results } = await enqueue(text, 'manual');
@@ -37,9 +43,9 @@ export function V2InboxScreen({ navigation }: { navigation: AppNavigation }) {
     } catch { setMessage('Could not add links. Your input remains here; retry when connected.'); }
   });
   return <KeyboardAvoidingView style={styles.screen} behavior={Platform.OS === 'ios' ? 'padding' : undefined}>
-    <FlatList data={items} keyExtractor={item => item.id} contentContainerStyle={styles.content} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled" refreshing={loading} onRefresh={() => void refresh()}
+    <FlatList data={items} keyExtractor={item => item.id} contentContainerStyle={styles.content} contentInsetAdjustmentBehavior="automatic" keyboardShouldPersistTaps="handled" keyboardDismissMode="on-drag" refreshing={loading} onRefresh={() => void refresh()}
       ListHeaderComponent={<View style={styles.stack}>
-        <V2TopBar onBack={navigation.goBack} />
+        <V2TopBar onBack={leave} />
         <V2TitleBlock title={`INBOX / ${items.length}`} subtitle="Save links now. Instagram and place searches run only after you choose Process, then Find Place." />
         {active ? <V2Button label="RESUME CURRENT IMPORT" onPress={() => router.dismissTo(draft ? '/match-place' : '/add-place')} /> : null}
         <V2TextField label="Paste Instagram links" multiline maxLength={50000} value={text} onChangeText={setText} autoCapitalize="none" autoCorrect={false} placeholder="Paste one or several posts or reels (up to 20)" />
