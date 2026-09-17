@@ -34,13 +34,14 @@ const { randomBytes } = require('node:crypto');
       console.log('PASS: complete inbox SQL assertion fixture');
     } finally { await db.end(); }
     console.log(execFileSync(process.execPath, ['script/verify-inbox-concurrency.cjs'], { windowsHide: true, encoding: 'utf8', timeout: 60000, env: { ...process.env, INBOX_TEST_DATABASE_URL: address } }));
+    console.log(execFileSync(process.execPath, ['script/verify-map-database.cjs'], { windowsHide: true, encoding: 'utf8', timeout: 60000, env: { ...process.env, INBOX_TEST_DATABASE_URL: address } }));
     console.log(execFileSync(process.execPath, ['script/verify-plans-database.cjs'], { windowsHide: true, encoding: 'utf8', timeout: 60000, env: { ...process.env, INBOX_TEST_DATABASE_URL: address } }));
     try {
       const report = execFileSync('powershell.exe', ['-NoProfile', '-Command', 'npx --no-install supabase db advisors --db-url postgresql://postgres@127.0.0.1:55432/postgres?sslmode=disable --type all'], {windowsHide:true,encoding:'utf8',timeout:60000});
-      fs.writeFileSync('dist/release-0.6-advisors.log', report);
-      console.log('Advisor output saved to dist/release-0.6-advisors.log');
+      fs.writeFileSync('dist/release-0.7-advisors.log', report);
+      console.log('Advisor output saved to dist/release-0.7-advisors.log');
     } catch (error) {
-      fs.writeFileSync('dist/release-0.6-advisors.log', String(error.stdout || '') + String(error.stderr || error.message));
+      fs.writeFileSync('dist/release-0.7-advisors.log', String(error.stdout || '') + String(error.stderr || error.message));
       console.log('LIMIT: Supabase advisors unavailable on standalone local PostgreSQL; see advisor log.');
     }
     const secret = randomBytes(48).toString('hex');

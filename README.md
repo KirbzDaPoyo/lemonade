@@ -212,3 +212,15 @@ web/                          Static public deletion information; not deployed
 - Android device acceptance is complete for the Release 0.3 one-source, duplicate-source, multi-source, persistence, export, and deletion flows against the migrated database.
 - Physical iOS, large-text/screen-reader, production signing, store submission, and public-page deployment remain pending.
 - Candidate ranking is advisory; users deliberately choose a result before saving.
+
+## Release 0.7 — Map and nearby library
+
+Version 0.7.0 adds an explicit Map entry, existing library filters, a bounded Google map of up to 20 saved places, optional foreground-only nearby distances, and existing detail/directions/outing-plan actions. Opening the map never automatically resolves positions or requests device location.
+
+Coordinates live only in account-session memory. `place-locations` verifies Clerk identity and owned saved IDs before reserving daily quota (60/user, 250/project) and requesting exactly Google `id,location`. No coordinate columns or export schema change were added. User-scoped operational counters are deleted with account data; aggregate global counters remain.
+
+Setup: install the lockfile, use separate restricted `GOOGLE_MAPS_ANDROID_API_KEY` and `GOOGLE_MAPS_IOS_API_KEY` at build time, and configure the server-only Places key for the Edge Function. `EXPO_PUBLIC_MAP_RESOLVER=mock` supplies labeled synthetic positions for cost-free development; `real` requires the deployed resolver. Keys/APIs, hosted migration/deployment, live checks and publication require explicit authorization. Missing native keys yield a controlled fallback. Location is requested only from Near me, accepts approximate permission, and adds no background service or tracking.
+
+Pinned new runtime dependencies: react-native-maps 1.20.1, expo-location 19.0.8, react-native-web 0.21.2. A **new native binary** is required; appVersion runtime 0.7.0 cannot update the 0.6.0 binary. Native projects remain generated/untracked.
+
+See [Release 0.7 implementation and verification](docs/release-0.7-map-nearby.md) for exact architecture, migration, cost assumptions, official policy sources, commands/results, pending device acceptance, rollout and rollback. Privacy/terms drafts are local under `web/`; they are not published. No guaranteed-free or device-acceptance claim is made.

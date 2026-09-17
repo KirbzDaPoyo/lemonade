@@ -1,3 +1,4 @@
+import { MapSessionProvider } from '../../src/store/map-session-context';
 import { PlansProvider } from '../../src/store/plans-context';
 import { useAuth } from '@clerk/expo';
 import { Redirect, Stack } from 'expo-router';
@@ -26,7 +27,7 @@ export default function AuthenticatedLayout() {
       <PlacesProvider key={userId} accessTokenProvider={getToken} userId={userId}>
         <InboxProvider key={userId} userId={userId} accessTokenProvider={getToken}>
           <PlansProvider key={userId} userId={userId} accessTokenProvider={getToken}>
-          <ImportFlowProvider>
+          <MapSessionProvider key={userId}><ImportFlowProvider>
             <AuthenticatedShareCoordinator />
             <Stack
               screenOptions={{
@@ -35,7 +36,7 @@ export default function AuthenticatedLayout() {
                 headerShown: false
               }}
             />
-          </ImportFlowProvider></PlansProvider>
+          </ImportFlowProvider></MapSessionProvider></PlansProvider>
         </InboxProvider>
       </PlacesProvider>
     </AppRecoveryBoundary>

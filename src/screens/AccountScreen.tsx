@@ -237,7 +237,7 @@ export function AccountScreen({ navigation }: { navigation: AppNavigation }) {
 
       <View style={[styles.module, styles.dangerModule]}>
         <V2SectionLabel color="pink">Delete account</V2SectionLabel>
-        <Text style={styles.body}>Permanently delete your saved places, sources, tags, notes, inbox items, outing plans, preferences, and Clerk sign-in identity. This cannot be undone.</Text>
+        <Text style={styles.body}>Permanently delete your saved places, sources, tags, notes, inbox items, outing plans, short-lived user-scoped map usage counters, preferences, and Clerk sign-in identity. This cannot be undone.</Text>
         <V2Button label="DELETE ACCOUNT" onPress={() => setShowDeletion(true)} variant="danger" />
       </View>
     </ScrollView>
@@ -253,7 +253,7 @@ export function AccountScreen({ navigation }: { navigation: AppNavigation }) {
           />
           <View style={styles.deletionSummary}>
             <V2SectionLabel color="pink">What will be deleted</V2SectionLabel>
-            <Text style={styles.body}>• All saved places, sources, tags, notes, statuses, favorites, inbox items, and outing plans</Text>
+            <Text style={styles.body}>• All saved places, sources, tags, notes, statuses, favorites, inbox items, outing plans, and short-lived user-scoped map usage counters</Text>
             <Text style={styles.body}>• Your Clerk account and ability to sign in with this identity</Text>
           </View>
 

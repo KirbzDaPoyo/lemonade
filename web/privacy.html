@@ -1,0 +1,82 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1" />
+    <title>Privacy | Project Lemonade</title>
+    <link rel="stylesheet" href="./styles.css" />
+  </head>
+  <body>
+    <main id="main">
+      <section class="hero">
+        <p class="eyebrow">PROJECT LEMONADE</p>
+        <h1>PRIVACY</h1>
+        <p>Release 0.7 draft — publication requires owner approval.</p>
+        <p>
+          Lemonade uses Clerk for sign-in and Supabase for your private saved
+          places, Instagram source references, tags, notes, import inbox, and
+          outing plans. Public Instagram metadata and Google Places help match
+          the places you choose to save.
+        </p>
+        <h2>Optional map and nearby features</h2>
+        <p>
+          Opening Map does not request your device location or resolve place
+          coordinates. You deliberately load up to 20 eligible saved places.
+          Google receives the stored Google Place IDs through our server to
+          resolve positions; device location is not included in these requests.
+        </p>
+        <p>
+          Foreground location is requested only after you choose Near me / use
+          my location. Approximate permission is accepted. A single fix is held
+          in memory and used locally to calculate approximate straight-line
+          distances. There is no background location, continuous tracking,
+          location history, home/work inference, or route calculation. The
+          current fix is discarded when it expires, on sign-out, on account
+          change, and when the process ends.
+        </p>
+        <p>
+          Resolved place coordinates are also kept only in memory during your
+          account session. Device coordinates, accuracy and derived distances
+          are not written to our database, local preferences, files, exports,
+          analytics or error reports.
+        </p>
+        <p>
+          The Google Maps SDK contacts Google to render maps and may process
+          network/device information and map interactions under Google's
+          policies. Keeping Lemonade's location calculation local does not mean
+          the map renderer is offline. External Google Maps directions may use
+          location according to the separate Google Maps application's
+          permissions.
+        </p>
+        <h2>Operational records and deletion</h2>
+        <p>
+          We retain short-lived daily map-attempt counters containing the UTC
+          date, user identity, count and update time, plus a project-wide
+          counter. They contain no place identifiers or location. Rows older
+          than two UTC dates are removed opportunistically on the next
+          reservation; without further usage, cleanup waits until the next
+          reservation. Account deletion removes your user-scoped counters and
+          private product records; the project-wide aggregate remains.
+        </p>
+        <p>
+          Portable export remains schema 4. It contains your product data, not
+          coordinates, device location or operational abuse-prevention counters.
+          <a href="./index.html">Account deletion instructions</a>.
+        </p>
+        <h2>Diagnostics</h2>
+        <p>
+          PostHog records allowlisted actions; Sentry receives scrubbed
+          technical failures. Map telemetry contains no location, distance,
+          viewport, place IDs, names, addresses, tags, notes, search text,
+          credentials or provider responses. Permission denial is not an
+          application error.
+        </p>
+        <p>
+          Map features are subject to the
+          <a href="https://policies.google.com/privacy">Google Privacy Policy</a
+          >. See our <a href="./terms.html">Terms of Use</a>.
+        </p>
+      </section>
+    </main>
+  </body>
+</html>

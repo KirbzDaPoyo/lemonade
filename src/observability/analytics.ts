@@ -1,3 +1,4 @@
+import { mapActions, type MapActionEvent } from './analytics-contract';
 import * as Application from 'expo-application';
 import Constants from 'expo-constants';
 import { Platform } from 'react-native';
@@ -74,6 +75,9 @@ const flushWithDeadline = async (deadlineMs = 600) => {
 };
 
 export const analytics = {
+  mapLocation(outcome: string) { if (['precise','approximate','denied','blocked','disabled','timeout','stale','unavailable'].includes(outcome)) capture('map_location', {outcome: outcome as AnalyticsEventProperties['map_location']['outcome']}); },
+  mapFailure(category: string) { if (['authentication','user_quota','project_quota','quota','configuration','network','timeout','unavailable','invalid'].includes(category)) capture('map_failure', {category: category as AnalyticsEventProperties['map_failure']['category']}); },
+  mapAction(action: MapActionEvent) { if (mapActions.includes(action)) capture('map_action', { action }); },
   inboxOpened() { capture('inbox_opened', {}); },
   inboxProcessingStarted() { capture('inbox_processing_started', {}); },
   inboxResolved() { capture('inbox_resolved', {}); },
