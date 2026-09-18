@@ -178,3 +178,14 @@ The owner authorized hosted migration, function deployment, restricted Android M
 - Local Android SDK/ADB was unavailable, so the authorized EAS preview path produced Android build 24. The owner installed it and confirmed the map and live resolver. An OTA preview update fixed cancellation while Android's permission dialog temporarily backgrounds the app; the owner then confirmed distances and radius filtering.
 - The final prerelease binary embeds that permission-dialog fix so fresh and offline installs do not depend on the earlier OTA update.
 
+## Final Android prerelease artifact — 2026-09-17
+
+- EAS build ID: `8f88112a-b5f3-46f4-8455-d7705db20e66`
+- Source commit: `2c2a3e99f95bdeba62a6a516f015f0db3c608859`
+- Version/build/runtime: `0.7.0` / `25` / `0.7.0`
+- Distribution/channel: internal APK / `preview`
+- EAS artifact: https://expo.dev/artifacts/eas/8X48VBvULZuMuj_e40nfao2oyYrIRLBGkwS0Mk9ofsQ.apk
+- Release asset: `project-lemonade-0.7.0-android-build25.apk`
+- SHA-256: `ff67b7e51cf76c2ed7b2da9bfccee913ecf120f9a2baa07404b33a0b3e12e861`
+
+EAS completed the build successfully. This binary embeds the Android permission-dialog lifecycle fix that the owner verified through the preview-channel update on build 24.
