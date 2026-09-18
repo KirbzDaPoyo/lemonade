@@ -52,7 +52,12 @@ export const boundAnalyticsResultCount = (count: number) =>
 export const boundAnalyticsCandidateRank = (rank: number) =>
   Math.max(1, Math.min(20, Math.trunc(Number.isFinite(rank) ? rank : 1)));
 
+export const mapActions = ['opened','load_requested','load_succeeded','load_partial','load_failed','nearby','permission_granted','permission_unavailable','radius_changed','selected','mode_changed','place_opened','plan_started'] as const;
+export type MapActionEvent = typeof mapActions[number];
 export type AnalyticsEventProperties = {
+  map_action: { action: MapActionEvent };
+  map_location: { outcome: 'precise'|'approximate'|'denied'|'blocked'|'disabled'|'timeout'|'stale'|'unavailable' };
+  map_failure: { category: 'authentication'|'user_quota'|'project_quota'|'quota'|'configuration'|'network'|'timeout'|'unavailable'|'invalid' };
   plan_action: { action: 'created' | 'place_added' | 'place_removed' | 'picker_used' | 'completed' | 'reopened' };
   map_handoff_opened: { action: 'map' | 'directions' };
   inbox_opened: Record<string, never>;

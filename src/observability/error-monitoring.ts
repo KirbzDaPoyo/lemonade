@@ -4,6 +4,7 @@ import { Platform } from 'react-native';
 import * as Sentry from '@sentry/react-native';
 
 export type ErrorOperation =
+  | 'map_render' | 'map_resolution' | 'map_quota' | 'map_configuration' | 'location_permission' | 'location_acquisition'
   | 'plan_storage'
   | 'inbox_storage'
   | 'preference_read'
@@ -20,6 +21,7 @@ export type ErrorOperation =
   | 'saved_places_write';
 
 export type ErrorCategory =
+  | 'map'
   | 'account'
   | 'boundary'
   | 'authentication'
@@ -42,7 +44,7 @@ const build = Application.nativeBuildVersion ?? 'unknown';
 const release = `project-lemonade@${version}+${build}`;
 
 const sensitiveKey =
-  /(?:plan|title|authorization|auth|token|cookie|email|caption|note|source|url|uri|query|request|response|body|place|address|search|identifier)/i;
+  /(?:latitude|longitude|coordinate|location|accuracy|distance|viewport|bounds|center|zoom|area|city|tag|api.?key|plan|title|authorization|auth|token|cookie|email|caption|note|source|url|uri|query|request|response|body|place|address|search|identifier)/i;
 const emailValue = /\b[^\s@]+@[^\s@]+\.[^\s@]+\b/g;
 const urlValue = /https?:\/\/\S+/gi;
 const bearerValue = /bearer\s+[a-z0-9._~+/=-]+/gi;

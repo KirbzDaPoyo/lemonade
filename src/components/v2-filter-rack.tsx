@@ -19,6 +19,7 @@ const statusOptions: Array<{ value: PlaceStatusFilter; label: string }> = [
 
 type Option = { value: string; label: string };
 type V2FilterRackProps = {
+  filtersOnly?: boolean;
   view: LibraryView;
   tags: PlaceTag[];
   categories: Option[];
@@ -29,7 +30,7 @@ type V2FilterRackProps = {
   onDensityChange: (density: LibraryDensity) => void;
 };
 
-export function V2FilterRack({ view, tags, categories, areas, onFilterChange, onClearFilters, onSortChange, onDensityChange }: V2FilterRackProps) {
+export function V2FilterRack({ filtersOnly = false, view, tags, categories, areas, onFilterChange, onClearFilters, onSortChange, onDensityChange }: V2FilterRackProps) {
   const { theme } = useAppTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const { height } = useWindowDimensions();
@@ -46,12 +47,14 @@ export function V2FilterRack({ view, tags, categories, areas, onFilterChange, on
           <Text style={styles.summary}>Filters{count ? ` (${count})` : ''}</Text>
           <View style={styles.filterMark}><View style={styles.filterLineWide} /><View style={styles.filterLineMedium} /><View style={styles.filterLineShort} /></View>
         </Pressable>
+        {!filtersOnly ? <>
         <Pressable accessibilityLabel={`Sort: ${sortLabels[view.sort]}`} accessibilityRole="button" accessibilityState={{ expanded: menu === 'sort' }} onPress={() => openMenu('sort')} style={({ pressed }) => [styles.trigger, pressed && styles.pressed]}>
           <Text style={styles.summary}>{sortLabels[view.sort]}</Text>
         </Pressable>
         <Pressable accessibilityLabel={`Compact rows, ${view.density === 'compact' ? 'on' : 'off'}`} accessibilityRole="switch" accessibilityState={{ checked: view.density === 'compact' }} onPress={() => onDensityChange(view.density === 'compact' ? 'comfortable' : 'compact')} style={({ pressed }) => [styles.densityButton, view.density === 'compact' && styles.selectedOption, pressed && styles.pressed]}>
           <Text style={[styles.optionText, view.density === 'compact' && styles.selectedOptionText]}>Compact</Text>
         </Pressable>
+        </> : null}
       </View>
       <Modal animationType={reduceMotion ? 'none' : 'fade'} onRequestClose={() => setMenu(null)} transparent visible={menu !== null}>
         <View style={[styles.modalRoot, { paddingTop: insets.top + theme.spacing.md, paddingBottom: insets.bottom + theme.spacing.md }]}>

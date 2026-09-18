@@ -105,6 +105,7 @@ export function V2HomeScreen({ navigation }: V2HomeScreenProps) {
             </View>
             <V2Button compact variant="ghost" label={`INBOX / ${inboxItems.length}`} onPress={() => navigation.navigate({ name: 'Inbox' })} />
             <V2Button compact variant="ghost" label={'Plans' + (plans.filter(p => p.status === 'active').length ? ' / ' + plans.filter(p => p.status === 'active').length : '')} onPress={() => navigation.navigate({ name: 'Plans' })} />
+            <V2Button compact variant="ghost" label="Map" onPress={() => navigation.navigate({ name: 'Map' })} />
             <View style={styles.searchRow}>
               <TextInput accessibilityLabel="Search saved places" placeholder="Search saved places" placeholderTextColor={theme.colors.textMuted} value={view.query} onChangeText={changeQuery} autoCapitalize="none" autoCorrect={false} returnKeyType="search" onSubmitEditing={Keyboard.dismiss} style={styles.searchInput} />
               {view.query ? <Pressable accessibilityLabel="Clear search" accessibilityRole="button" onPress={() => changeQuery('')} style={styles.clearSearch}><Text style={styles.clearText}>CLEAR</Text></Pressable> : null}

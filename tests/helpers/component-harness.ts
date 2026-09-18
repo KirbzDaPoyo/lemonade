@@ -5,7 +5,7 @@ import { runInNewContext } from 'node:vm';
 import ts from 'typescript';
 export const load = (path: string, stubs: Record<string, unknown>) => {
   const filename = resolve(path); const localRequire = createRequire(filename); const exports = {};
-  runInNewContext(ts.transpileModule(readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true } }).outputText, { exports, atob, URL, Error, __DEV__: true, process: { env: { EXPO_PUBLIC_POSTHOG_API_KEY: 'test', EXPO_PUBLIC_POSTHOG_HOST: 'https://example.test' } }, require: (name: string) => name in stubs ? stubs[name] : localRequire(name) });
+  runInNewContext(ts.transpileModule(readFileSync(filename, 'utf8'), { compilerOptions: { module: ts.ModuleKind.CommonJS, jsx: ts.JsxEmit.ReactJSX, esModuleInterop: true } }).outputText, { exports, atob, URL, Error, setTimeout, clearTimeout, AbortController, Request, Response, fetch, __DEV__: true, process: { env: { EXPO_PUBLIC_POSTHOG_API_KEY: 'test', EXPO_PUBLIC_POSTHOG_HOST: 'https://example.test' } }, require: (name: string) => name in stubs ? stubs[name] : localRequire(name) });
   return exports as any;
 };
 export const hooks = () => {

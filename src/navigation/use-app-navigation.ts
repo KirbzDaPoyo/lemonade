@@ -29,6 +29,7 @@ export function useAppNavigation(): AppNavigation {
 
     const hrefForRoute = (route: AppRoute) => {
       switch (route.name) {
+        case 'Map': return '/map' as const;
         case 'Plans':
           return { pathname: '/plans' as const, params: route.addPlaceId ? { addPlaceId: route.addPlaceId } : {} };
         case 'PlanDetail':
