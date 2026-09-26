@@ -5,7 +5,7 @@ import { V2PlaceDetailScreen } from '../../../src/screens/v2-place-detail-screen
 
 export default function PlaceDetailRoute() {
   const navigation = useAppNavigation();
-  const { placeId } = useLocalSearchParams<{ placeId?: string | string[] }>();
+  const { placeId, logVisit } = useLocalSearchParams<{ placeId?: string | string[]; logVisit?: string }>();
   const resolvedPlaceId = Array.isArray(placeId) ? placeId[0] : placeId;
 
   if (!resolvedPlaceId) {
@@ -15,7 +15,9 @@ export default function PlaceDetailRoute() {
   return (
     <V2PlaceDetailScreen
       navigation={navigation}
+      key={resolvedPlaceId}
       placeId={resolvedPlaceId}
+      logVisit={logVisit === '1'}
     />
   );
 }

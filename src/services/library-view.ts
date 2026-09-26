@@ -1,8 +1,10 @@
+import type { VisitSummary } from '../types/visit';
 import type { PlaceCard } from '../types/place';
 import type { PlaceStatusFilter } from '../types/filters';
 import { matchesPlacesScreenFilters } from './placeFilters';
 
-export const sortLabels = { newest: 'Newest saved', oldest: 'Oldest saved', updated: 'Recently updated', name: 'Place name A–Z' } as const;
+export const sortLabels = { newest: 'Newest saved', oldest: 'Oldest saved', updated: 'Recently updated', name: 'Place name A–Z', recently_visited: 'Recently visited', most_visited: 'Most visited', personal_rating: 'Personal rating' } as const;
+export const isVisitSort = (sort: string) => ['recently_visited', 'most_visited', 'personal_rating'].includes(sort);
 export type LibrarySort = keyof typeof sortLabels;
 export type LibraryDensity = 'comfortable' | 'compact';
 export type LibraryPreferences = { sort: LibrarySort; density: LibraryDensity };
@@ -22,7 +24,7 @@ export function libraryOptions(places: readonly PlaceCard[], field: 'category' |
   }
   return [...options].sort(([a], [b]) => compare(a, b)).map(([value, label]) => ({ value, label }));
 }
-export function selectLibraryPlaces(places: readonly PlaceCard[], view: LibraryView) {
+export function selectLibraryPlaces(places: readonly PlaceCard[], view: LibraryView, summaries: Readonly<Record<string, VisitSummary>> = {}) {
   const tokens = normalizeLibraryText(view.query).split(' ').filter(Boolean);
   return places.filter(place => {
     if (!matchesPlacesScreenFilters(place, view.status, view.tag, view.favoritesOnly)) return false;
@@ -34,7 +36,10 @@ export function selectLibraryPlaces(places: readonly PlaceCard[], view: LibraryV
     ].filter(Boolean).join(' '));
     return tokens.every(token => content.includes(token));
   }).sort((a, b) => {
-    const primary = view.sort === 'name' ? compare(normalizeLibraryText(a.placeName), normalizeLibraryText(b.placeName))
+    const primary = view.sort === 'recently_visited' ? compare(summaries[b.id]?.latestDate ?? '', summaries[a.id]?.latestDate ?? '')
+      : view.sort === 'most_visited' ? (summaries[b.id]?.count ?? 0) - (summaries[a.id]?.count ?? 0)
+      : view.sort === 'personal_rating' ? (summaries[b.id]?.latestRating ?? 0) - (summaries[a.id]?.latestRating ?? 0)
+      : view.sort === 'name' ? compare(normalizeLibraryText(a.placeName), normalizeLibraryText(b.placeName))
       : view.sort === 'oldest' ? timestamp(a.createdAt) - timestamp(b.createdAt)
       : view.sort === 'updated' ? timestamp(b.updatedAt) - timestamp(a.updatedAt)
       : timestamp(b.createdAt) - timestamp(a.createdAt);

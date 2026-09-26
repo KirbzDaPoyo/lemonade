@@ -4,9 +4,12 @@ Project Lemonade is an Expo app for saving cafes, restaurants, and other places 
 
 Share Instagram links to a private import inbox, or paste up to 20 at a time. Capture never calls Instagram or Google. Choose Process, then Find Place to import public metadata, confirm a real-world match, and save it to your private library. Direct Add Place remains available.
 
-> Project status: Release 0.6.0 preview installed and owner-tested. Automated checks pass and hosted migrations are applied. The owner walkthrough reports 19 passes and one explicitly skipped Maps fallback device check; general UI improvements are deferred beyond 0.6. See [Release 0.6 implementation and verification](docs/release-0.6-outing-plans.md) for evidence and limitations.
+> Project status: Release 0.8.0 Android preview (build 26) installed and owner-tested. Automated checks and hosted journal rollout passed. Account deletion on the 0.8 device, TalkBack, and reduced-motion device checks were explicitly skipped. See [Release 0.8 notes and verification](docs/prerelease-v0.8.0.md).
 
 ## Current Features
+
+- Private visit history with calendar dates, optional personal ratings/reflections, editing, deletion, and safe retries
+- Visit summaries, three journal-based library sorts, and plan shortcuts to log a visit
 
 - Private outing plans with up to 20 saved places, comparison, completion/reopening, and local Pick for me
 - Google Maps and directions handoff using saved Place IDs or validated fallbacks, without location permission or provider lookups
@@ -23,7 +26,7 @@ Share Instagram links to a private import inbox, or paste up to 20 at a time. Ca
 - Saved-place lifecycle states: Want to Go, Visited, and Skipped
 - Local token search across saved places and bounded source metadata
 - Combined status, favorite, tag, category and area filters
-- Four stable sort orders and comfortable/compact rows, with per-account local presentation preferences
+- Seven stable sort orders and comfortable/compact rows, with per-account local presentation preferences
 - An independent Favorite preference
 - User-created tags with rename, delete, assignment, and filtering
 - Editable notes and links to the original Instagram post and Google Maps
@@ -31,7 +34,7 @@ Share Instagram links to a private import inbox, or paste up to 20 at a time. Ca
 - Light, dark, and system appearance with persisted preference
 - Expo Router navigation with protected routes and native Android Back behavior
 - Privacy-scoped PostHog product analytics and scrubbed Sentry error monitoring
-- Schema-4 JSON export including outing plans and ordered memberships through the native share sheet
+- [Schema-5](docs/data-export-schema.md) JSON export including complete private visit history, outing plans, and ordered memberships through the native share sheet
 - Authenticated account and data deletion with explicit partial-failure handling
 - A static, undeployed public account-deletion information page
 - Reusable EAS development clients for standalone device testing

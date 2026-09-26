@@ -1,3 +1,4 @@
+import { useVisits } from '../store/visits-context';
 import { usePlans } from '../store/plans-context';
 import { useAuth, useUser } from '@clerk/expo';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -32,6 +33,7 @@ export function AccountScreen({ navigation }: { navigation: AppNavigation }) {
   const { clearLocalData, getExportData } = usePlaces();
   const inbox = useInbox();
   const plans = usePlans();
+  const visits = useVisits();
   const exportAccount = useRef(user?.id);
   exportAccount.current = user?.id;
   useEffect(() => () => { exportAccount.current = undefined; }, []);
@@ -71,6 +73,11 @@ export function AccountScreen({ navigation }: { navigation: AppNavigation }) {
 
   const handleExport = async () => {
     const exportingUser = user?.id;
+    const journalGuard = visits.guard();
+    const assertCurrent = () => {
+      if (!exportingUser || exportAccount.current !== exportingUser) throw new Error('Export account changed');
+      journalGuard();
+    };
     setExportStatus('exporting');
     const exportData = await getExportData();
 
@@ -82,11 +89,13 @@ export function AccountScreen({ navigation }: { navigation: AppNavigation }) {
     try {
       const inboxItems = await inbox.exportItems();
       const diningPlans = await plans.exportPlans();
+      const visitHistory = await visits.exportAll();
       if (!exportingUser || exportAccount.current !== exportingUser) return;
-      await sharePlaceDataExport(exportData, inboxItems, diningPlans);
+      await sharePlaceDataExport(exportData, inboxItems, diningPlans, visitHistory, assertCurrent);
       setExportStatus('idle');
     } catch (error) {
-      errorMonitoring.captureException(error, { operation: 'data_export', category: 'export' });
+      if (exportAccount.current !== exportingUser || !visits.active) return;
+      errorMonitoring.captureException(new Error('Account data export failed'), { operation: 'data_export', category: 'export' });
       setExportStatus('failed');
     }
   };
@@ -104,7 +113,7 @@ export function AccountScreen({ navigation }: { navigation: AppNavigation }) {
     } catch (error) {
       errorMonitoring.captureException(error, { operation: 'account_deletion', category: 'account' });
       setDeletionPhase('partial');
-      setDeletionMessage('Your saved places, tags, inbox items, and outing plans were deleted, but your Clerk account was not. Retry identity deletion below without recreating any data.');
+      setDeletionMessage('Your saved places, tags, inbox items, outing plans, and private visit history were deleted, but your Clerk account was not. Retry identity deletion below without recreating any data.');
       return;
     }
 
@@ -130,6 +139,7 @@ export function AccountScreen({ navigation }: { navigation: AppNavigation }) {
       }
 
       await deleteCurrentUserData(freshAccessToken);
+      visits.clear();
     } catch (error) {
       errorMonitoring.captureException(error, { operation: 'account_deletion', category: 'account' });
       setDeletionPhase('idle');
@@ -203,8 +213,8 @@ export function AccountScreen({ navigation }: { navigation: AppNavigation }) {
 
       <View style={styles.module}>
         <V2SectionLabel>Data export</V2SectionLabel>
-        <Text style={styles.body}>Download a complete JSON copy of your saved places, tags, notes, statuses, favorites, dates, source links, outing plans and their membership, and pending inbox items (including hints and attempt metadata).</Text>
-        <Text style={styles.body}>Your device's share sheet lets you choose the final destination. Lemonade replaces its temporary export file the next time you export.</Text>
+        <Text style={styles.body}>Download a complete JSON copy of your saved places, tags, notes, statuses, favorites, dates, source links, outing plans and their membership, complete private visit history (dates, personal ratings, and reflections), and pending inbox items (including hints and attempt metadata).</Text>
+        <Text style={styles.body}>Your device's share sheet lets you choose the final destination. Lemonade removes its temporary copy after the share sheet closes. Copies you save elsewhere remain under your control.</Text>
         <V2Button
           disabled={exportStatus === 'exporting'}
           label={exportStatus === 'exporting' ? 'PREPARING EXPORT' : 'EXPORT MY DATA'}
@@ -237,7 +247,7 @@ export function AccountScreen({ navigation }: { navigation: AppNavigation }) {
 
       <View style={[styles.module, styles.dangerModule]}>
         <V2SectionLabel color="pink">Delete account</V2SectionLabel>
-        <Text style={styles.body}>Permanently delete your saved places, sources, tags, notes, inbox items, outing plans, short-lived user-scoped map usage counters, preferences, and Clerk sign-in identity. This cannot be undone.</Text>
+        <Text style={styles.body}>Permanently delete your saved places, sources, tags, notes, inbox items, outing plans, private visit history, short-lived user-scoped map usage counters, preferences, and Clerk sign-in identity. This cannot be undone.</Text>
         <V2Button label="DELETE ACCOUNT" onPress={() => setShowDeletion(true)} variant="danger" />
       </View>
     </ScrollView>
@@ -253,7 +263,7 @@ export function AccountScreen({ navigation }: { navigation: AppNavigation }) {
           />
           <View style={styles.deletionSummary}>
             <V2SectionLabel color="pink">What will be deleted</V2SectionLabel>
-            <Text style={styles.body}>• All saved places, sources, tags, notes, statuses, favorites, inbox items, outing plans, and short-lived user-scoped map usage counters</Text>
+            <Text style={styles.body}>• All saved places, sources, tags, notes, statuses, favorites, inbox items, outing plans, private visit history, and short-lived user-scoped map usage counters</Text>
             <Text style={styles.body}>• Your Clerk account and ability to sign in with this identity</Text>
           </View>
 

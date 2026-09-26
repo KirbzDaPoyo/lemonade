@@ -653,7 +653,7 @@ test("public privacy and deletion drafts explain transient location and operatio
   assert.match(privacy, /Foreground location/);
   assert.match(privacy, /memory/);
   assert.match(privacy, /Google Privacy Policy/);
-  assert.match(privacy, /schema 4/);
+  assert.match(privacy, /schema 5/);
   assert.match(
     readFileSync("web/index.html", "utf8"),
     /user-scoped map usage counters/,

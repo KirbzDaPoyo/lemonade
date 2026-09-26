@@ -1,3 +1,5 @@
+import { useLibraryVisitSummaries } from '../services/use-library-visit-summaries';
+import { isVisitSort } from '../services/library-view';
 import { usePlans } from '../store/plans-context';
 import { useAuth } from '@clerk/expo';
 import { useEffect, useMemo, useRef, useState } from 'react';
@@ -50,7 +52,10 @@ export function V2HomeScreen({ navigation }: V2HomeScreenProps) {
       return tag === current.tag && category === current.category && area === current.area ? current : { ...current, tag, category, area };
     });
   }, [areas, categories, isLoading, tagFilterOptions]);
-  const filteredPlaces = useMemo(() => selectLibraryPlaces(places, view), [places, view]);
+  const visitSort = isVisitSort(view.sort);
+  const visitSummaries = useLibraryVisitSummaries(places.map(place => place.id), visitSort && !isLoading);
+  const waitingForVisits = visitSort && (isLoading || !visitSummaries.data);
+  const filteredPlaces = useMemo(() => waitingForVisits ? [] : selectLibraryPlaces(places, view, visitSummaries.data), [places, view, visitSummaries.data, waitingForVisits]);
   const clearFilters = () => { setSessionView(clearLibraryFilters); analytics.libraryFiltersCleared(); };
   const changeQuery = (query: string) => {
     if (query.trim() && !searchStarted.current) { searchStarted.current = true; analytics.librarySearchStarted(); }
@@ -119,10 +124,13 @@ export function V2HomeScreen({ navigation }: V2HomeScreenProps) {
             />
             {storageError ? <StorageErrorBanner message={storageError} onRetry={retryStorage} /> : null}
             {isInitialLoading ? <StatePanel loading title="Loading saved places" /> : null}
-            {!isInitialLoading ? <Text style={styles.resultsLabel}>{filteredPlaces.length} of {places.length} places</Text> : null}
+            {visitSort && visitSummaries.loading ? <StatePanel loading title="Loading visit details" /> : null}
+            {visitSort && visitSummaries.error ? <StorageErrorBanner message={visitSummaries.error} onRetry={visitSummaries.retry} /> : null}
+            {visitSort && !waitingForVisits ? <Text style={styles.resultsLabel}>Based on your recorded visits. Places without relevant history appear last.</Text> : null}
+            {!isInitialLoading && !waitingForVisits ? <Text style={styles.resultsLabel}>{filteredPlaces.length} of {places.length} places</Text> : null}
           </View>
         }
-        ListEmptyComponent={isInitialLoading || storageError ? null : places.length === 0 ? <StatePanel title="Your library is empty" body="Use Add place to save your first Instagram discovery." /> : <View><StatePanel title="No matching places" body="Try another search or clear your filters." />{view.query ? <Pressable accessibilityRole="button" onPress={() => changeQuery('')} style={styles.clearSearch}><Text style={styles.clearText}>Clear search</Text></Pressable> : null}<Pressable accessibilityRole="button" onPress={clearFilters} style={styles.clearSearch}><Text style={styles.clearText}>Clear filters</Text></Pressable></View>}
+        ListEmptyComponent={isInitialLoading || waitingForVisits || storageError ? null : places.length === 0 ? <StatePanel title="Your library is empty" body="Use Add place to save your first Instagram discovery." /> : <View><StatePanel title="No matching places" body="Try another search or clear your filters." />{view.query ? <Pressable accessibilityRole="button" onPress={() => changeQuery('')} style={styles.clearSearch}><Text style={styles.clearText}>Clear search</Text></Pressable> : null}<Pressable accessibilityRole="button" onPress={clearFilters} style={styles.clearSearch}><Text style={styles.clearText}>Clear filters</Text></Pressable></View>}
         ListFooterComponent={<View style={styles.footerEnergy}><EnergySlash /></View>}
         renderItem={({ item, index }) => (
           <V2PlaceRow

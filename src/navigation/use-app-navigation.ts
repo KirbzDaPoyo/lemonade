@@ -45,7 +45,7 @@ export function useAppNavigation(): AppNavigation {
         case 'CandidateMatch':
           return appRoutePaths.matchPlace;
         case 'PlaceDetail':
-          return getPlaceDetailHref(route.placeId);
+          return getPlaceDetailHref(route.placeId, route.logVisit);
       }
     };
 
