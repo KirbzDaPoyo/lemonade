@@ -84,7 +84,7 @@ test('comfortable and compact row component output preserves identity, lifecycle
 test('active route and V2 screen integrate local selector, distinct empty states and independent clear', () => {
   const route = readFileSync('app/(app)/index.tsx','utf8');
   const screen = readFileSync('src/screens/v2-home-screen.tsx','utf8');
-  assert.match(route, /V2HomeScreen/); assert.match(screen, /selectLibraryPlaces\(places, view\)/);
+  assert.match(route, /V2HomeScreen/); assert.match(screen, /selectLibraryPlaces\(places, view, visitSummaries.data\)/);
   assert.match(screen, /Your library is empty/); assert.match(screen, /No matching places/);
   assert.match(screen, /changeQuery\(''\)/); assert.match(screen, /setSessionView\(clearLibraryFilters\)/);
   assert.match(screen, /density=\{view.density\}/);
@@ -144,9 +144,11 @@ test('preference hook restores per account, preserves session choices on failure
 });
 
 test('V2 home callbacks combine filters, clear search independently, and recompute changed records', () => {
+  let visitDetails: any = { data: undefined, loading: false };
   let session = { ...base }; let preferences = { sort: 'newest', density: 'comfortable' }; let records = [place()];
   const events: any[] = [];
   const { V2HomeScreen } = load('src/screens/v2-home-screen.tsx', {
+    '../services/use-library-visit-summaries': { useLibraryVisitSummaries: () => visitDetails },
     '../store/plans-context': { usePlans: () => ({ plans: [] }) },
     '../store/inbox-context': { useInbox: () => ({ items: [] }) },
     '../components/v2-controls': { V2Button: 'V2Button' },
@@ -178,4 +180,13 @@ test('V2 home callbacks combine filters, clear search independently, and recompu
   records = [place({ sources: [{ ...place().sources[0], recommendedItems:['newrecommendation'] }] })]; assert.equal(render().list.props.data.length,1);
   records = []; assert.equal(render().list.props.ListEmptyComponent.props.title,'Your library is empty');
   assert.ok(events.every(event => !JSON.stringify(event).includes('missing')));
+  records = [place()]; render().search.props.onChangeText(''); render().rack.props.onSortChange('most_visited');
+  visitDetails = { loading: true };
+  assert.equal(render().list.props.data.length, 0); assert.equal(render().list.props.ListEmptyComponent, null);
+  assert.ok(flatten(render().list.props.ListHeaderComponent).some(n => n.props?.title === 'Loading visit details'));
+  visitDetails = { error: 'Retry visit details' };
+  assert.equal(render().list.props.data.length, 0);
+  assert.ok(flatten(render().list.props.ListHeaderComponent).some(n => n.props?.message === 'Retry visit details'));
+  visitDetails = { data: { a: { count: 0, latestDate: null, latestRating: null } } };
+  assert.equal(render().list.props.data.length, 1);
 });

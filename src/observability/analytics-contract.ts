@@ -69,7 +69,7 @@ export type AnalyticsEventProperties = {
   library_search_started: Record<string, never>;
   library_filters_cleared: Record<string, never>;
   library_filter_changed: { filter_type: 'status' | 'favorite' | 'tag' | 'category' | 'area' };
-  library_sort_changed: { sort: 'newest' | 'oldest' | 'updated' | 'name' };
+  library_sort_changed: { sort: 'newest' | 'oldest' | 'updated' | 'name' | 'recently_visited' | 'most_visited' | 'personal_rating' };
   library_density_changed: { density: 'comfortable' | 'compact' };
   auth_completed: { method: 'email_code' };
   share_received: { provider: 'instagram'; platform: string };

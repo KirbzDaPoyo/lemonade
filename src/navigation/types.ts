@@ -18,7 +18,7 @@ export type AppRoute =
       draft: DraftPlaceEntry;
       candidates: PlaceCandidate[];
     }
-  | { name: 'PlaceDetail'; placeId: string };
+  | { name: 'PlaceDetail'; placeId: string; logVisit?: boolean };
 
 export type AppNavigation = {
   navigate: (route: AppRoute) => void;

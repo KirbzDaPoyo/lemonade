@@ -2,13 +2,14 @@ import { sortPlans, type DiningPlan } from '../../types/dining-plan';
 import type { PlaceCard, PlaceTag } from '../../types/place';
 
 export const PLACE_DATA_EXPORT_FORMAT = 'project-lemonade-data-export' as const;
-export const PLACE_DATA_EXPORT_SCHEMA_VERSION = 4 as const;
+export const PLACE_DATA_EXPORT_SCHEMA_VERSION = 5 as const;
 
 export type PlaceDataExport = {
   format: typeof PLACE_DATA_EXPORT_FORMAT;
   schemaVersion: typeof PLACE_DATA_EXPORT_SCHEMA_VERSION;
   exportedAt: string;
   data: {
+    visits: import('../../types/visit').VisitExport[];
     diningPlans: DiningPlan[];
     importInboxItems: import('../../types/inbox').InboxItem[];
     savedPlaces: Array<{
@@ -56,12 +57,15 @@ export const createPlaceDataExport = (
   tags: PlaceTag[],
   exportedAt = new Date().toISOString(),
   inboxItems: import('../../types/inbox').InboxItem[] = [],
-  plans: DiningPlan[] = []
+  plans: DiningPlan[] = [],
+  visits: import('../../types/visit').VisitExport[] = []
 ): PlaceDataExport => ({
   format: PLACE_DATA_EXPORT_FORMAT,
   schemaVersion: PLACE_DATA_EXPORT_SCHEMA_VERSION,
   exportedAt,
   data: {
+    visits: visits.map(v => ({ id: v.id, savedPlaceId: v.savedPlaceId, visitDate: v.visitDate, rating: v.rating, note: v.note,
+      createdAt: v.createdAt, updatedAt: v.updatedAt, validationTimezone: v.validationTimezone })).sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0),
     diningPlans: sortPlans(plans).map(p => ({ id: p.id, title: p.title, status: p.status, completedAt: p.completedAt, createdAt: p.createdAt, updatedAt: p.updatedAt, placeIds: [...p.placeIds] })),
     importInboxItems: inboxItems.map(item => ({ id: item.id, sourceUrl: item.sourceUrl, origin: item.origin, status: item.status, placeNameHint: item.placeNameHint, failureCategory: item.failureCategory, attemptCount: item.attemptCount, lastAttemptAt: item.lastAttemptAt, createdAt: item.createdAt, updatedAt: item.updatedAt })),
     savedPlaces: places

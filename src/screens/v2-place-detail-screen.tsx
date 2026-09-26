@@ -1,3 +1,4 @@
+import { PlaceVisitJournal } from '../components/place-visit-journal';
 import { MapButtons } from '../components/map-buttons';
 import { useEffect, useMemo, useRef, useState } from 'react';
 import { Alert, Linking, Modal, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
@@ -18,7 +19,7 @@ import { usePlaces } from '../store/PlacesContext';
 import type { PlaceStatus, PlaceTag } from '../types/place';
 import { statusLabels } from '../utils/labels';
 
-type V2PlaceDetailScreenProps = { navigation: AppNavigation; placeId: string };
+type V2PlaceDetailScreenProps = { navigation: AppNavigation; placeId: string; logVisit?: boolean };
 const statusOptions: PlaceStatus[] = ['want_to_go', 'visited', 'skipped'];
 
 const openExternalUrl = async (url: string, destination: string, onOpened?: () => void) => {
@@ -30,12 +31,13 @@ const openExternalUrl = async (url: string, destination: string, onOpened?: () =
   }
 };
 
-export function V2PlaceDetailScreen({ navigation, placeId }: V2PlaceDetailScreenProps) {
+export function V2PlaceDetailScreen({ navigation, placeId, logVisit }: V2PlaceDetailScreenProps) {
   const { theme } = useAppTheme();
   const styles = useMemo(() => createStyles(theme), [theme]);
   const { availableTags, createTag, deletePlace, deleteTag, places, renameTag, retryStorage, storageError, updatePlace } = usePlaces();
   const place = places.find((savedPlace) => savedPlace.id === placeId);
   const [notesDraft, setNotesDraft] = useState('');
+  const [journalBusy, setJournalBusy] = useState(false);
   const [isSavingNotes, setIsSavingNotes] = useState(false);
   const [isUpdatingFavorite, setIsUpdatingFavorite] = useState(false);
   const [pendingStatus, setPendingStatus] = useState<PlaceStatus | null>(null);
@@ -189,7 +191,7 @@ export function V2PlaceDetailScreen({ navigation, placeId }: V2PlaceDetailScreen
     );
   }
 
-  const isUpdating = pendingStatus !== null || isUpdatingFavorite || pendingTagAction !== null;
+  const isUpdating = journalBusy || pendingStatus !== null || isUpdatingFavorite || pendingTagAction !== null;
 
 
   return (
@@ -264,6 +266,8 @@ export function V2PlaceDetailScreen({ navigation, placeId }: V2PlaceDetailScreen
 
       </View>
 
+      <PlaceVisitJournal logVisit={logVisit} key={place.id} placeId={place.id} disabled={pendingStatus !== null || isUpdatingFavorite || pendingTagAction !== null} onBusyChange={setJournalBusy} />
+
       <View style={styles.controlSection}>
         <V2SectionLabel>Notes</V2SectionLabel>
         <TextInput
@@ -313,7 +317,7 @@ export function V2PlaceDetailScreen({ navigation, placeId }: V2PlaceDetailScreen
         ) : null}
       </View>
 
-      <V2Button label="DELETE PLACE" onPress={handleDelete} variant="danger" />
+      <V2Button disabled={journalBusy} label="DELETE PLACE" onPress={handleDelete} variant="danger" />
       </ScrollView>
       <Modal
         animationType="slide"

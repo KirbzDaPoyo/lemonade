@@ -1,3 +1,4 @@
+import { compareDatabaseTimestamps } from '../utils/compare-database-timestamps';
 import {
   createContext,
   ReactNode,
@@ -18,7 +19,7 @@ import {
 } from '../repositories/savedPlaces';
 import { getUserTagKey } from '../services/tags/user-tags';
 import { errorMonitoring } from '../observability/error-monitoring';
-import type { PlaceCard, PlaceTag } from '../types/place';
+import type { PlaceCard, PlaceTag, PlaceStatus } from '../types/place';
 
 type PlacesContextValue = {
   availableTags: PlaceTag[];
@@ -36,6 +37,7 @@ type PlacesContextValue = {
   clearLocalData: () => void;
   getExportData: () => Promise<SavedPlacesExportData | undefined>;
   retryStorage: () => void;
+  applyVisitPlaceStatus: (id: string, status: PlaceStatus, updatedAt: string) => void;
 };
 
 const PlacesContext = createContext<PlacesContextValue | undefined>(undefined);
@@ -98,7 +100,13 @@ export function PlacesProvider({
       }
 
       if (placesResult.status === 'fulfilled') {
-        setPlaces(placesResult.value);
+        setPlaces(current => {
+          const byId = new Map(current.map(place => [place.id, place]));
+          return placesResult.value.map(incoming => {
+            const confirmed = byId.get(incoming.id);
+            return confirmed && compareDatabaseTimestamps(confirmed.updatedAt, incoming.updatedAt) > 0 ? confirmed : incoming;
+          });
+        });
       }
 
       if (tagsResult.status === 'fulfilled') {
@@ -197,6 +205,8 @@ export function PlacesProvider({
       isLoading,
       isStorageAvailable: Boolean(repository),
       storageError,
+      applyVisitPlaceStatus: (id, status, updatedAt) => setPlaces(current => current.map(place =>
+        place.id === id && compareDatabaseTimestamps(updatedAt, place.updatedAt) >= 0 ? { ...place, status, updatedAt } : place)),
       retryStorage,
       clearLocalData,
       getExportData: async () => {

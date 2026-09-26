@@ -1,3 +1,4 @@
+import { VisitsProvider } from '../../src/store/visits-context';
 import { MapSessionProvider } from '../../src/store/map-session-context';
 import { PlansProvider } from '../../src/store/plans-context';
 import { useAuth } from '@clerk/expo';
@@ -27,7 +28,7 @@ export default function AuthenticatedLayout() {
       <PlacesProvider key={userId} accessTokenProvider={getToken} userId={userId}>
         <InboxProvider key={userId} userId={userId} accessTokenProvider={getToken}>
           <PlansProvider key={userId} userId={userId} accessTokenProvider={getToken}>
-          <MapSessionProvider key={userId}><ImportFlowProvider>
+          <VisitsProvider key={userId} userId={userId} accessTokenProvider={getToken}><MapSessionProvider key={userId}><ImportFlowProvider>
             <AuthenticatedShareCoordinator />
             <Stack
               screenOptions={{
@@ -36,7 +37,7 @@ export default function AuthenticatedLayout() {
                 headerShown: false
               }}
             />
-          </ImportFlowProvider></MapSessionProvider></PlansProvider>
+          </ImportFlowProvider></MapSessionProvider></VisitsProvider></PlansProvider>
         </InboxProvider>
       </PlacesProvider>
     </AppRecoveryBoundary>
