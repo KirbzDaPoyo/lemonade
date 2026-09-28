@@ -1,0 +1,39 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <meta name="robots" content="noindex, nofollow, noarchive">
+  <meta name="referrer" content="no-referrer">
+  <meta name="description" content="A read-only shortlist shared with you on Project Lemonade.">
+  <meta property="og:title" content="A shared shortlist · Project Lemonade">
+  <meta property="og:description" content="Open a read-only shortlist. No account needed.">
+  <meta property="og:type" content="website">
+  <title>Shared shortlist · Project Lemonade</title>
+  <link rel="stylesheet" href="/sharing.css">
+  <script type="module" src="/sharing-page.mjs"></script>
+</head>
+<body>
+  <!-- Established Synthetic Editorial identity. Read mode: recipients scan an ordered shortlist,
+       then choose a map destination. Local Barlow lettering, chartreuse identity, cobalt actions,
+       ruled rows and generous reading space. Narrow specified feature; no new visual system. -->
+  <button class="skip" id="skip" type="button">Skip to shortlist</button>
+  <header class="masthead"><span class="brand">PROJECT<br>LEMONADE</span><span class="read-only">Shared with you<br><strong>Read-only</strong></span></header>
+  <main id="main" tabindex="-1">
+    <section class="shortlist" aria-labelledby="plan-title">
+      <div class="heading-row"><h1 id="plan-title">A place to start.</h1><button id="refresh" type="button" hidden>Refresh shortlist</button></div>
+      <button id="open-app" type="button" hidden>Open in Lemonade</button>
+      <p id="status" role="status" aria-live="polite" aria-atomic="true">Opening this shortlist…</p>
+      <ol id="places" aria-label="Places in this shortlist" hidden></ol>
+      <noscript><p>Turn on JavaScript to retrieve this shortlist. Its contents are checked each time you open it.</p></noscript>
+    </section>
+    <aside class="about" aria-labelledby="about-title">
+      <h2 id="about-title">Good places, kept together.</h2>
+      <p>Lemonade helps you save places and make shortlists for your next outing. This one was shared with you. No account or installation needed to view it.</p>
+      <p class="fine">Names and locations are written by the person sharing. Map actions open Google Maps; Lemonade does not verify these details.</p>
+      <p class="fine">The owner can update or disable this link. Refresh to check the latest version. Anyone with the link can view and forward it.</p>
+    </aside>
+  </main>
+  <footer><span>MAKE ROOM FOR YOUR NEXT FIND.</span><nav aria-label="Information"><a href="/sharing-help.html">Sharing help</a><a href="/privacy.html">Privacy</a><a href="/terms.html">Terms</a></nav></footer>
+</body>
+</html>

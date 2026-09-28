@@ -1,0 +1,52 @@
+@font-face { font-family: Barlow; src: url('/fonts/BarlowCondensed-Bold.ttf') format('truetype'); font-weight: 700; font-display: swap; }
+:root { color-scheme: light dark; --field:#f4f6f1; --ink:#080a08; --muted:#535c56; --line:#bac2bc; --brand:#304700; --acid:#baff24; --action:#234dc7; --on-action:#fff; font-family:ui-sans-serif,system-ui,-apple-system,BlinkMacSystemFont,'Segoe UI',sans-serif; }
+* { box-sizing:border-box; }
+body { margin:0; background:var(--field); color:var(--ink); font-size:1rem; line-height:1.6; }
+::selection { background:var(--acid); color:#080a08; }
+html { scrollbar-color:var(--muted) var(--field); }
+[hidden] { display:none !important; }
+a { color:var(--action); text-underline-offset:.22em; }
+a:hover { text-decoration-thickness:2px; }
+a:focus-visible, button:focus-visible, main:focus-visible { outline:3px solid var(--action); outline-offset:5px; }
+.masthead, main, footer { width:min(68rem, calc(100% - 3rem)); margin-inline:auto; }
+.masthead { display:flex; flex-wrap:wrap; justify-content:space-between; align-items:center; padding:1.5rem 0; border-bottom:1px solid var(--line); gap:1.5rem; }
+.brand { font-family:Barlow,sans-serif; font-size:1.7rem; font-weight:700; line-height:.9; color:var(--brand); }
+.read-only { color:var(--muted); text-align:right; font-size:.9rem; }
+.read-only strong { color:var(--ink); font-weight:600; }
+.shortlist { padding:clamp(2.5rem,7vw,5rem) 0 3rem; }
+.heading-row { display:flex; align-items:flex-start; justify-content:space-between; gap:2rem; }
+h1 { margin:0; max-width:20ch; font-family:Barlow,sans-serif; font-weight:700; font-size:clamp(2.7rem,6vw,5rem); line-height:1.05; overflow-wrap:anywhere; }
+#status { color:var(--muted); margin:1rem 0 2.5rem; max-width:65ch; }
+button,.map-link { min-height:48px; display:inline-flex; align-items:center; justify-content:center; padding:.7rem 1rem; border:1px solid var(--action); border-radius:4px; background:transparent; color:var(--action); font:inherit; font-weight:600; cursor:pointer; text-decoration:none; text-align:center; }
+button:hover,.map-link:hover { background:var(--action); color:var(--on-action); }
+button:disabled { opacity:.55; cursor:wait; }
+#refresh { flex-shrink:0; margin-top:.4rem; }
+ol { padding:0; margin:0; list-style:none; border-top:1px solid var(--line); }
+li { display:grid; grid-template-columns:2.4rem minmax(0,1fr) auto; gap:1.2rem; align-items:center; padding:1.6rem 0; border-bottom:1px solid var(--line); }
+.number { font-family:Barlow,sans-serif; font-size:1.6rem; color:var(--muted); font-variant-numeric:tabular-nums; align-self:start; }
+h2 { margin:0; font-size:1.3rem; line-height:1.35; overflow-wrap:anywhere; }
+.place-details p { margin:.35rem 0 0; color:var(--muted); overflow-wrap:anywhere; }
+.map-link { font-size:.9rem; gap:.6rem; }
+.map-link svg { width:18px; height:18px; flex-shrink:0; }
+.about { max-width:65ch; padding:1rem 0 3rem; }
+.about h2 { font-family:Barlow,sans-serif; font-size:2rem; }
+.about p { margin:.75rem 0; }
+.fine { color:var(--muted); font-size:.95rem; }
+footer { padding:1.5rem 0 2rem; border-top:1px solid var(--line); display:flex; align-items:center; justify-content:space-between; flex-wrap:wrap; gap:1rem; color:var(--muted); font-size:.8rem; }
+footer nav { display:flex; flex-wrap:wrap; gap:.5rem 1.2rem; }
+footer a { display:inline-flex; align-items:center; min-height:48px; }
+.skip { position:absolute; left:1rem; top:-6rem; padding:1rem; background:var(--field); }
+.skip:focus { top:1rem; }
+.help { max-width:65ch; padding:3rem 0; }
+.help h2 { margin-top:2rem; }
+@media (max-width:600px) {
+ .masthead,main,footer { width:calc(100% - 2rem); }
+ .heading-row { flex-direction:column; gap:.75rem; }
+ li { grid-template-columns:1.8rem minmax(0,1fr); gap:.75rem; }
+ .map-link { grid-column:2; justify-self:start; }
+ #status { margin-bottom:1.75rem; }
+}
+@media (prefers-color-scheme:dark) { :root { --field:#050806; --ink:#f5f7f1; --muted:#adb7af; --line:#3d4b42; --brand:#baff24; --action:#91a9ff; --on-action:#050806; } }
+@media (forced-colors:active) { button,.map-link { border:1px solid ButtonText; } }
+
+#open-app { margin-top: 1rem; }

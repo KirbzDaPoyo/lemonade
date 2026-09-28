@@ -1,0 +1,4 @@
+# Keep generated browser modules reproducible across Windows and Linux.
+web/sharing-content.mjs text eol=lf
+web/sharing-config.mjs text eol=lf
+web/vercel.json text eol=lf

@@ -16,3 +16,4 @@ yarn-error.log*
 .design/
 .impeccable/
 supabase/.temp/
+.vercel/
