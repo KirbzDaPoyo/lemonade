@@ -1,0 +1,14 @@
+[
+  {
+    "relation": [
+      "delegate_permission/common.handle_all_urls"
+    ],
+    "target": {
+      "namespace": "android_app",
+      "package_name": "com.projectlemonade.mvp",
+      "sha256_cert_fingerprints": [
+        "DB:C8:23:66:86:A2:22:0B:E5:0A:CB:78:B7:2E:DD:0B:0D:9B:13:F8:FF:70:FF:4B:89:9A:12:7E:B6:C9:35:CE"
+      ]
+    }
+  }
+]
