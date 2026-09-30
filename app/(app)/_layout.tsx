@@ -1,3 +1,4 @@
+import { SharingProvider } from '../../src/store/sharing-context';
 import { VisitsProvider } from '../../src/store/visits-context';
 import { MapSessionProvider } from '../../src/store/map-session-context';
 import { PlansProvider } from '../../src/store/plans-context';
@@ -28,7 +29,7 @@ export default function AuthenticatedLayout() {
       <PlacesProvider key={userId} accessTokenProvider={getToken} userId={userId}>
         <InboxProvider key={userId} userId={userId} accessTokenProvider={getToken}>
           <PlansProvider key={userId} userId={userId} accessTokenProvider={getToken}>
-          <VisitsProvider key={userId} userId={userId} accessTokenProvider={getToken}><MapSessionProvider key={userId}><ImportFlowProvider>
+          <SharingProvider key={userId} userId={userId} accessTokenProvider={getToken}><VisitsProvider key={userId} userId={userId} accessTokenProvider={getToken}><MapSessionProvider key={userId}><ImportFlowProvider>
             <AuthenticatedShareCoordinator />
             <Stack
               screenOptions={{
@@ -37,7 +38,7 @@ export default function AuthenticatedLayout() {
                 headerShown: false
               }}
             />
-          </ImportFlowProvider></MapSessionProvider></VisitsProvider></PlansProvider>
+          </ImportFlowProvider></MapSessionProvider></VisitsProvider></SharingProvider></PlansProvider>
         </InboxProvider>
       </PlacesProvider>
     </AppRecoveryBoundary>

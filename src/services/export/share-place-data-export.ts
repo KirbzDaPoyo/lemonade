@@ -10,7 +10,7 @@ let sharing = false;
 export const sharePlaceDataExport = async ({
   places,
   tags
-}: SavedPlacesExportData, inboxItems: import('../../types/inbox').InboxItem[] = [], plans: import('../../types/dining-plan').DiningPlan[] = [], visits: import('../../types/visit').VisitExport[] = [], assertCurrent: () => void = () => {}) => {
+}: SavedPlacesExportData, inboxItems: import('../../types/inbox').InboxItem[] = [], plans: import('../../types/dining-plan').DiningPlan[] = [], visits: import('../../types/visit').VisitExport[] = [], assertCurrent: () => void = () => {}, planSharing: import('../owner-sharing').SharingDetails[] = []) => {
   if (sharing) throw new Error('An export is already being shared.');
   sharing = true;
   let exportFile: File | undefined;
@@ -27,7 +27,7 @@ export const sharePlaceDataExport = async ({
 
     exportFile.create();
     exportFile.write(
-      serializePlaceDataExport(createPlaceDataExport(places, tags, undefined, inboxItems, plans, visits))
+      serializePlaceDataExport(createPlaceDataExport(places, tags, undefined, inboxItems, plans, visits, planSharing))
     );
 
     assertCurrent();

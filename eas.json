@@ -31,7 +31,10 @@
       "channel": "preview",
       "env": {
         "EXPO_PUBLIC_APP_ENV": "preview",
-        "EXPO_PUBLIC_RELEASE_CHANNEL": "preview"
+        "EXPO_PUBLIC_RELEASE_CHANNEL": "preview",
+        "EXPO_PUBLIC_SHARING_ORIGIN": "https://share.makeitlemonade.app",
+        "SHARING_APP_LINKS_ENABLED": "true",
+        "SHARING_ANDROID_SHA256": "DB:C8:23:66:86:A2:22:0B:E5:0A:CB:78:B7:2E:DD:0B:0D:9B:13:F8:FF:70:FF:4B:89:9A:12:7E:B6:C9:35:CE"
       }
     }
   },

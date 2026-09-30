@@ -33,8 +33,8 @@ test('Expo Router is the application entry point with every 0.2-C route', () => 
 test('authentication groups are protected by Clerk session state', () => {
   const rootLayout = readFileSync('app/_layout.tsx', 'utf8');
 
-  assert.match(rootLayout, /Stack\.Protected guard=\{Boolean\(isSignedIn\)\}/);
-  assert.match(rootLayout, /Stack\.Protected guard=\{!isSignedIn\}/);
+  assert.match(rootLayout, /Stack\.Protected guard=\{Boolean\(isLoaded && isSignedIn\)\}/);
+  assert.match(rootLayout, /Stack\.Protected guard=\{Boolean\(isLoaded && !isSignedIn\)\}/);
   assert.match(rootLayout, /<Stack\.Screen name="\(app\)"/);
   assert.match(rootLayout, /<Stack\.Screen name="\(auth\)"/);
 });

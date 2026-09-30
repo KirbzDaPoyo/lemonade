@@ -1,4 +1,6 @@
+const { associationConfiguration } = require('./script/sharing-associations.cjs');
 module.exports = ({ config }) => {
+  const sharing = associationConfiguration();
   const isDevelopment = process.env.EXPO_PUBLIC_APP_ENV === "development";
   const androidKey = process.env.GOOGLE_MAPS_ANDROID_API_KEY?.trim();
   const iosKey = process.env.GOOGLE_MAPS_IOS_API_KEY?.trim();
@@ -9,6 +11,7 @@ module.exports = ({ config }) => {
       : {}),
     ios: {
       ...config.ios,
+      ...(sharing?.iosId ? { associatedDomains: [...(config.ios?.associatedDomains ?? []), 'applinks:' + sharing.hostname] } : {}),
       ...(isDevelopment
         ? { bundleIdentifier: "com.projectlemonade.mvp.dev" }
         : {}),
@@ -19,6 +22,7 @@ module.exports = ({ config }) => {
     },
     android: {
       ...config.android,
+      ...(sharing ? { intentFilters: [...(config.android?.intentFilters ?? []), { action: 'VIEW', autoVerify: true, category: ['BROWSABLE', 'DEFAULT'], data: [{ scheme: 'https', host: sharing.hostname, path: '/s' }] }] } : {}),
       ...(isDevelopment ? { package: "com.projectlemonade.mvp.dev" } : {}),
       blockedPermissions: [
         ...(config.android?.blockedPermissions ?? []),
