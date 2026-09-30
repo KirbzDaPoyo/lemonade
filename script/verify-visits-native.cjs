@@ -39,7 +39,7 @@ const { execFileSync, spawn } = require('node:child_process');
         create function auth.jwt() returns jsonb language sql stable as $$ select coalesce(nullif(current_setting('request.jwt.claims',true),''),'{}')::jsonb $$;
         grant usage on schema auth, public to anon, authenticated, service_role;
         grant execute on function auth.jwt() to anon, authenticated, service_role;`);
-      await db.query('create role api_authenticator login noinherit; grant authenticated, anon to api_authenticator');
+      await db.query('create role api_authenticator login noinherit; grant authenticated, anon, service_role to api_authenticator');
       const files = fs.readdirSync('supabase/migrations').filter(f => f.endsWith('.sql')).sort();
       for (const file of files) {
         // Prove that an existing visited place acquires no fabricated history.
@@ -57,6 +57,7 @@ const { execFileSync, spawn } = require('node:child_process');
       windowsHide: true, stdio: 'inherit', timeout: 60000,
       env: { ...process.env, VISITS_TEST_DATABASE_URL: address }
     });
+    if (process.argv.includes('--sharing') && !process.argv.includes('--api-only')) execFileSync(process.execPath, ['script/verify-sharing-database.cjs'], { windowsHide: true, stdio: 'inherit', timeout: 60000, env: { ...process.env, VISITS_TEST_DATABASE_URL: address } });
     if (process.argv.includes('--api') || process.argv.includes('--api-only')) {
       const apiPort = await new Promise((resolve, reject) => {
         const server = net.createServer(); server.on('error', reject);
@@ -82,6 +83,7 @@ const { execFileSync, spawn } = require('node:child_process');
         windowsHide: true, stdio: 'inherit', timeout: 180000,
         env: { ...process.env, VISITS_TEST_DATABASE_URL: address, VISITS_TEST_REST_URL: base, VISITS_TEST_JWT_SECRET: secret }
       });
+      if (process.argv.includes('--sharing')) execFileSync(process.execPath, ['node_modules/tsx/dist/cli.mjs', 'script/verify-sharing-api.ts'], { windowsHide: true, stdio: 'inherit', timeout: 60000, env: { ...process.env, VISITS_TEST_REST_URL: base, VISITS_TEST_JWT_SECRET: secret } });
       execFileSync('powershell.exe', ['-NoProfile', '-Command', 'npm exec --no -- supabase@2.117.0 db advisors --db-url ' + address + '?sslmode=disable --type all'], { windowsHide: true, stdio: 'inherit', timeout: 60000 });
     }
   } finally {

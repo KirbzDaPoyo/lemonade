@@ -57,9 +57,9 @@ test('account clearing and journal changes invalidate pending export and summary
   }
 });
 
-test('schema 5 exports every journal field, calendar day and timestamp precision with explicit allowlisting', () => {
+test('schema 6 exports every journal field, calendar day and timestamp precision with explicit allowlisting', () => {
   const output = createPlaceDataExport([place('p')], [], 'now', [], [], [{ ...visit, userId: 'secret', raw: 'private-payload' } as any]);
-  assert.equal(output.schemaVersion, 5); assert.deepEqual(output.data.visits, [visit]);
+  assert.equal(output.schemaVersion, 6); assert.deepEqual(output.data.visits, [visit]);
   assert.ok(!JSON.stringify(output).includes('secret')); assert.ok(!JSON.stringify(output).includes('private-payload'));
   assert.deepEqual(createPlaceDataExport([], []).data.visits, []);
 });

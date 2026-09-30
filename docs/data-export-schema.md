@@ -1,6 +1,6 @@
 # Account data export schema
 
-The export format is `project-lemonade-data-export`, schema version **5**. It is UTF-8 JSON with an `exportedAt` UTC timestamp and a `data` object. Version 5 preserves the existing `savedPlaces`, `tags`, `importInboxItems`, and `diningPlans` arrays and adds `visits`.
+The export format is `project-lemonade-data-export`, schema version **6**. It is UTF-8 JSON with an `exportedAt` UTC timestamp and a `data` object. Version 6 preserves `savedPlaces`, `tags`, `importInboxItems`, `diningPlans`, and `visits`, and adds `planSharing`.
 
 Each visit contains:
 
@@ -19,3 +19,10 @@ Visits are exported in stable identifier order. All persisted visits are read us
 Retrieval failures stop export rather than sharing partial visit history. Account changes, sign-out, and local journal changes during preparation invalidate the operation; retry after changes finish. Like the existing multi-resource export, this is not a single database snapshot: changes made from another device during retrieval may affect the result. Finish editing before exporting a backup.
 
 The native share sheet chooses the destination. Lemonade removes its cache copy when the share operation finishes or fails; a process interruption can leave the temporary copy until the next export or operating-system cache cleanup. Files saved to another destination are controlled by the user. Export makes no Google, Instagram, or Apify requests. Older clients exporting schema 4 omit visits and must not be used as complete backups of journal data. Import/restore is not provided by this release.
+
+
+## Schema 6 — plan sharing
+
+`data.planSharing` contains owner-only metadata for plans with saved sharing settings: `planId`, `enabled`, `revision`, public `title`, `createdAt`, `updatedAt`, and ordered `labels` (`savedPlaceId`, independently authored `name`, optional `location`, `updatedAt`). A null name means the current member has no public label. A plan with no sharing settings is absent. Existing schema-5 fields remain unchanged.
+
+The export explicitly excludes bearer tokens, verifiers, encrypted credentials, request identifiers and working share links. Pages are fetched until exhausted; an unavailable page fails the whole export. Apply the release-0.9 owner-metadata migration before distributing this client. Cross-page exports are not database snapshots; avoid editing the account from another device during export.

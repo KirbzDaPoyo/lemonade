@@ -10,7 +10,7 @@ import { ClerkProvider, useAuth } from '@clerk/expo';
 import { tokenCache } from '@clerk/expo/token-cache';
 import Constants, { ExecutionEnvironment } from 'expo-constants';
 import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
+import { Stack, usePathname } from 'expo-router';
 import { ShareIntentProvider } from 'expo-share-intent';
 import { StatusBar } from 'expo-status-bar';
 import { useMemo } from 'react';
@@ -50,11 +50,12 @@ function LoadingScreen({
   );
 }
 
-function RootNavigator() {
+export function RootNavigator() {
   const { isLoaded, isSignedIn } = useAuth();
+  const pathname = usePathname();
   const { theme } = useAppTheme();
 
-  if (!isLoaded) {
+  if (!isLoaded && pathname !== '/shared') {
     return <LoadingScreen />;
   }
 
@@ -66,12 +67,13 @@ function RootNavigator() {
         headerShown: false
       }}
     >
-      <Stack.Protected guard={Boolean(isSignedIn)}>
+      <Stack.Protected guard={Boolean(isLoaded && isSignedIn)}>
         <Stack.Screen name="(app)" />
       </Stack.Protected>
-      <Stack.Protected guard={!isSignedIn}>
+      <Stack.Protected guard={Boolean(isLoaded && !isSignedIn)}>
         <Stack.Screen name="(auth)" />
       </Stack.Protected>
+      <Stack.Screen name="shared" />
       <Stack.Screen name="+not-found" />
     </Stack>
   );

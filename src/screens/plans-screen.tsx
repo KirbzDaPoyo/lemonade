@@ -1,3 +1,4 @@
+import { PlanSharingPanel } from '../components/plan-sharing-panel';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 import { ActivityIndicator, Alert, BackHandler, Keyboard, ScrollView, Text, View } from 'react-native';
 import { SafeAreaView } from 'react-native-safe-area-context';
@@ -107,6 +108,7 @@ export function PlansScreen({ navigation, planId, addPlaceId }: {
   </> : plan ? <>
    <Text accessibilityLabel={`Plan ${plan.status}, ${members.length} saved places`} style={textStyle}>{plan.status === 'active' ? 'Active shortlist' : 'Completed plan'} · {members.length} / 20 places</Text>
    {plan.placeIds.length > members.length && !library.isLoading ? <Text accessibilityRole="alert" style={textStyle}>Some places are no longer available in your library. Refresh plans and the library to reconcile changes.</Text> : null}
+   <PlanSharingPanel key={plan.id} planId={plan.id}/>
    <V2Button variant="secondary" label="Rename plan" disabled={state.busy} onPress={() => { setTitle(plan.title); setEditing(true); }}/>
    <V2Button variant="secondary" label={plan.status === 'active' ? 'Complete plan' : 'Reopen plan'} disabled={state.busy} onPress={() => void transition()}/>
    <Text style={textStyle}>Completing this shortlist does not mark places visited.</Text>

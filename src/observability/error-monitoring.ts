@@ -45,10 +45,12 @@ const build = Application.nativeBuildVersion ?? 'unknown';
 const release = `project-lemonade@${version}+${build}`;
 
 const sensitiveKey =
-  /(?:journal|rating|visit|reflection|timezone|latitude|longitude|coordinate|location|accuracy|distance|viewport|bounds|center|zoom|area|city|tag|api.?key|plan|title|authorization|auth|token|cookie|email|caption|note|source|url|uri|query|request|response|body|place|address|search|identifier)/i;
+  /(?:sharing|shared|public.?content|public.?name|public.?label|credential|verifier|ciphertext|journal|rating|visit|reflection|timezone|latitude|longitude|coordinate|location|accuracy|distance|viewport|bounds|center|zoom|area|city|tag|api.?key|plan|title|authorization|auth|token|cookie|email|caption|note|source|url|uri|query|request|response|body|place|address|search|identifier)/i;
 const emailValue = /\b[^\s@]+@[^\s@]+\.[^\s@]+\b/g;
-const urlValue = /https?:\/\/\S+/gi;
+const urlValue = /(?:https?|project-lemonade(?:-dev)?):\/\/\S+/gi;
 const bearerValue = /bearer\s+[a-z0-9._~+/=-]+/gi;
+// Share credentials may appear under an innocuous key or in a router error.
+const opaqueCredentialValue = /(^|[^A-Za-z0-9_-])(?:[A-Za-z0-9_-]{43}|[A-Fa-f0-9]{64}|[A-Za-z0-9_-]{79})(?=$|[^A-Za-z0-9_-])/g;
 
 const sanitizeValue = (value: unknown, key = ''): unknown => {
   if (sensitiveKey.test(key)) return '[Filtered]';
@@ -57,7 +59,8 @@ const sanitizeValue = (value: unknown, key = ''): unknown => {
     return value
       .replace(emailValue, '[Filtered email]')
       .replace(urlValue, '[Filtered URL]')
-      .replace(bearerValue, '[Filtered token]');
+      .replace(bearerValue, '[Filtered token]')
+      .replace(opaqueCredentialValue, '$1[Filtered credential]');
   }
 
   if (Array.isArray(value)) {

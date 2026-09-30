@@ -55,7 +55,7 @@ test('data export is versioned and contains every portable place field', () => {
   );
 
   assert.equal(dataExport.format, 'project-lemonade-data-export');
-  assert.equal(dataExport.schemaVersion, 5);
+  assert.equal(dataExport.schemaVersion, 6);
   assert.equal(dataExport.exportedAt, '2026-09-07T09:00:00.000Z');
   assert.deepEqual(dataExport.data.savedPlaces[0], {
     id: 'place-1',

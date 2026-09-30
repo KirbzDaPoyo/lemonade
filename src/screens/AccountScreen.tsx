@@ -1,3 +1,4 @@
+import { useSharing } from '../store/sharing-context';
 import { useVisits } from '../store/visits-context';
 import { usePlans } from '../store/plans-context';
 import { useAuth, useUser } from '@clerk/expo';
@@ -34,6 +35,7 @@ export function AccountScreen({ navigation }: { navigation: AppNavigation }) {
   const inbox = useInbox();
   const plans = usePlans();
   const visits = useVisits();
+  const sharing = useSharing();
   const exportAccount = useRef(user?.id);
   exportAccount.current = user?.id;
   useEffect(() => () => { exportAccount.current = undefined; }, []);
@@ -74,24 +76,28 @@ export function AccountScreen({ navigation }: { navigation: AppNavigation }) {
   const handleExport = async () => {
     const exportingUser = user?.id;
     const journalGuard = visits.guard();
+    const sharingGuard = sharing.guard();
     const assertCurrent = () => {
       if (!exportingUser || exportAccount.current !== exportingUser) throw new Error('Export account changed');
       journalGuard();
+      sharingGuard();
     };
     setExportStatus('exporting');
-    const exportData = await getExportData();
-
-    if (!exportData) {
-      setExportStatus('failed');
-      return;
-    }
-
     try {
+      const exportData = await getExportData();
+      assertCurrent();
+
+      if (!exportData) {
+        setExportStatus('failed');
+        return;
+      }
+
       const inboxItems = await inbox.exportItems();
       const diningPlans = await plans.exportPlans();
       const visitHistory = await visits.exportAll();
+      const sharingRecords = await sharing.exportAll();
       if (!exportingUser || exportAccount.current !== exportingUser) return;
-      await sharePlaceDataExport(exportData, inboxItems, diningPlans, visitHistory, assertCurrent);
+      await sharePlaceDataExport(exportData, inboxItems, diningPlans, visitHistory, assertCurrent, sharingRecords);
       setExportStatus('idle');
     } catch (error) {
       if (exportAccount.current !== exportingUser || !visits.active) return;
@@ -140,6 +146,7 @@ export function AccountScreen({ navigation }: { navigation: AppNavigation }) {
 
       await deleteCurrentUserData(freshAccessToken);
       visits.clear();
+      sharing.clear();
     } catch (error) {
       errorMonitoring.captureException(error, { operation: 'account_deletion', category: 'account' });
       setDeletionPhase('idle');

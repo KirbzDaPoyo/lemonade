@@ -1,14 +1,16 @@
+import type { SharingDetails } from '../owner-sharing';
 import { sortPlans, type DiningPlan } from '../../types/dining-plan';
 import type { PlaceCard, PlaceTag } from '../../types/place';
 
 export const PLACE_DATA_EXPORT_FORMAT = 'project-lemonade-data-export' as const;
-export const PLACE_DATA_EXPORT_SCHEMA_VERSION = 5 as const;
+export const PLACE_DATA_EXPORT_SCHEMA_VERSION = 6 as const;
 
 export type PlaceDataExport = {
   format: typeof PLACE_DATA_EXPORT_FORMAT;
   schemaVersion: typeof PLACE_DATA_EXPORT_SCHEMA_VERSION;
   exportedAt: string;
   data: {
+    planSharing: SharingDetails[];
     visits: import('../../types/visit').VisitExport[];
     diningPlans: DiningPlan[];
     importInboxItems: import('../../types/inbox').InboxItem[];
@@ -58,12 +60,16 @@ export const createPlaceDataExport = (
   exportedAt = new Date().toISOString(),
   inboxItems: import('../../types/inbox').InboxItem[] = [],
   plans: DiningPlan[] = [],
-  visits: import('../../types/visit').VisitExport[] = []
+  visits: import('../../types/visit').VisitExport[] = [],
+  planSharing: SharingDetails[] = []
 ): PlaceDataExport => ({
   format: PLACE_DATA_EXPORT_FORMAT,
   schemaVersion: PLACE_DATA_EXPORT_SCHEMA_VERSION,
   exportedAt,
   data: {
+    planSharing: planSharing.map(s => ({ planId: s.planId, enabled: s.enabled, revision: s.revision, title: s.title,
+      createdAt: s.createdAt, updatedAt: s.updatedAt, labels: s.labels.map(l => ({ savedPlaceId: l.savedPlaceId,
+        name: l.name, location: l.location, updatedAt: l.updatedAt })) })).sort((a, b) => a.planId.localeCompare(b.planId)),
     visits: visits.map(v => ({ id: v.id, savedPlaceId: v.savedPlaceId, visitDate: v.visitDate, rating: v.rating, note: v.note,
       createdAt: v.createdAt, updatedAt: v.updatedAt, validationTimezone: v.validationTimezone })).sort((a, b) => a.id < b.id ? -1 : a.id > b.id ? 1 : 0),
     diningPlans: sortPlans(plans).map(p => ({ id: p.id, title: p.title, status: p.status, completedAt: p.completedAt, createdAt: p.createdAt, updatedAt: p.updatedAt, placeIds: [...p.placeIds] })),

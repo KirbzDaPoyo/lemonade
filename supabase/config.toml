@@ -8,3 +8,9 @@ verify_jwt = false
 
 [functions.place-locations]
 verify_jwt = false
+
+[functions.plan-sharing]
+verify_jwt = false
+
+[functions.shared-plan]
+verify_jwt = false
