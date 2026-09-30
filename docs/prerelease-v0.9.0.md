@@ -1,6 +1,6 @@
 # v0.9.0 — Read-only plan sharing
 
-Android preview: **0.9.0, build 28**, runtime **0.9.0**. Sharing is globally disabled pending release activation.
+Android preview: **0.9.0, build 28**, runtime **0.9.0**. Sharing is enabled for this prerelease (activated 30 September 2026).
 
 ## Included
 
@@ -15,7 +15,7 @@ Android preview: **0.9.0, build 28**, runtime **0.9.0**. Sharing is globally dis
 
 [EAS build 28](https://expo.dev/accounts/land-of-poyo/projects/project-lemonade/builds/d0905ea3-24cf-4fe8-aad9-55b22725af88). Install the preview APK over the existing app. Existing signing identity and package com.projectlemonade.mvp are retained. Native clipboard support requires this binary; do not send this as an OTA update to 0.8.
 
-The owner installed and tested build 28. EAS uploaded the uncommitted mobile working tree; its Git HEAD refers to the earlier website/domain commit, not all included mobile code. Subsequent policy/release documentation edits do not require another native build. No store submission or GitHub release is implied by these notes.
+The owner installed and tested build 28. EAS uploaded the uncommitted mobile working tree; its Git HEAD refers to the earlier website/domain commit, not all included mobile code. Subsequent policy/release documentation edits do not require another native build. The GitHub prerelease includes the tested APK and SHA256SUMS.txt; no app-store submission has been made.
 
 ## Backend rollout
 
@@ -38,4 +38,4 @@ Explicitly untested: TalkBack (owner skipped), physical iOS, account deletion on
 
 ## Operations and rollback
 
-Keep SHARING_ENABLED=false until the owner chooses activation. Disable it to stop public retrieval and credential delivery/creation without deleting private plans or public labels. Existing copies/screenshots cannot be recalled. Preserve encryption keys while associated links exist. A restored backup must not resurrect old credentials without an invalidation review. See release-0.9-rollout.md for deployment and acceptance history.
+SHARING_ENABLED=true is configured and verified. Set it to false to stop public retrieval and credential delivery/creation without deleting private plans or public labels. Existing copies/screenshots cannot be recalled. Preserve encryption keys while associated links exist. A restored backup must not resurrect old credentials without an invalidation review. See release-0.9-rollout.md for deployment and acceptance history.
