@@ -138,3 +138,7 @@ https://expo.dev/accounts/land-of-poyo/projects/project-lemonade/builds/d0905ea3
 ## Build 28 Android acceptance — 2026-09-30
 
 Owner reports all six guided steps passed: upfront public-name explanation/count and persistent feedback, creation/copy of a synthetic plan link, Android App Link opening while app is running, opening after swiping app away, signed-out public read-only viewing without owner controls, and unavailable/cleared content after owner disable. These are owner-reported physical Android results. iOS remains unverified. Backend SHARING_ENABLED successfully reset to false after the report. Remaining checks include schema-6 export/deletion, accessibility and browser fallback; optional web native-open button remains hidden.
+
+## Prerelease activation — 2026-09-30
+
+After publishing v0.9.0, the owner explicitly authorized ongoing sharing activation. SHARING_ENABLED=true was set and verified against the stored secret digest. Earlier disabled-state entries document temporary test windows and are superseded by this activation. Build 28 and the existing deployment remain in use; no new APK or tag change is required.
